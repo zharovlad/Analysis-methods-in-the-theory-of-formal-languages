@@ -1,0 +1,38 @@
+struct _struct {
+    int b;
+    short c;
+    long d;
+};
+
+/* комментарий такой */
+// комментарий другой
+
+
+struct __struct {
+    _struct s[];
+};
+
+/* комментарий третий
+все тот же третий комментарий
+*/
+
+int main () {
+    double a = 22.870 * 3 \ (8 | 9);
+    _struct struct1;
+    struct1.b = 5;
+    struct1.d = 8;
+    __struct struct2;
+    struct2.s.c = 3;
+    short array;
+    for (int i = 0; i < 100; i = i + 1) 
+        for (short j = 3; j < 8.48; j = j + 10e+1)
+            for (long k = 88; k < 89; k = k + i)
+                array = ((array >> j) << k) * 3у-6 - 88 / 33;
+    // ещё один комментарий
+    double e = 1e-05;
+    a | 5 == struct1.b & 7;
+    (a ^ struct1.b) != 8 >> 3;
+    struct2.s.d << 8 <= a;
+    int c <= (b | 1) ^ 3#
+    a != b >= c$
+}
