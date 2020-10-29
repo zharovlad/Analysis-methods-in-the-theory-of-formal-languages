@@ -2,7 +2,7 @@
 #include "defs.hpp"
 #include "scaner.hpp"
 
-const string input_file_name = "input1.txt";
+const string input_file_name = "input3.txt";
 
 int main() {
     TScaner *scan = new TScaner(input_file_name);

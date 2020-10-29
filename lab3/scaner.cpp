@@ -6,6 +6,9 @@
 const string errorConst = "Incorrect constant";
 const string errorFile = "Input file not found";
 const string errorSymbol = "Incorrect symbol";
+const string errorComment = "Unclosed comment";
+const string errorTruncated = "Truncated constant";
+
 
 TScaner::TScaner(string FileName) {
     getData(FileName);
@@ -16,20 +19,21 @@ TScaner::TScaner(string FileName) {
     keyword["long"] = Tlong;
     keyword["double"] = Tdouble; 
     keyword["struct"] = Tstruct;
+    numberString = 1;
 }
 
 void TScaner::putUK(int i) { uk=i; } 
 
 int TScaner::getUK() { return uk; }
 
-void TScaner::printError(string err, string a = "") {
-    if (a.length() == 0) {
-        cout << "Error : " << err << endl;
-        exit(0);
-    }
-    else
-        cout << "Error : " << err << " '" << a << "'" << endl;
-    
+void TScaner::printError(string err, string a) {
+    cout << endl << "String #" << numberString << endl;
+    cout << "Error : " << err << " '" << a << "'" << endl;
+}
+
+void TScaner::printError(string err) {
+    cout << endl << "String #" << numberString << endl;
+    cout << "Error : " << err << endl;    
 }
 
 void TScaner::getData(string FileName) {
@@ -50,37 +54,63 @@ int TScaner::scaner(TypeLex &l) {
     l.clear();          // очистили поле лексемы
 
     start:              // метка игнорируемых элементов
-    while ((t[uk] == ' ') || (t[uk] == '\n') || (t[uk] == '\t'))
-         uk++;
+    while ((t[uk] == ' ') || (t[uk] == '\n') || (t[uk] == '\t')) {
+        if (t[uk] == '\n') 
+            numberString += 1;
+        uk++;
+    }
 
     if ((t[uk] == '/') && (t[uk + 1] == '/')) { // комментарий начинается с "//" и до конца строки
             uk += 2;
+            if (uk == t.size()) 
+                goto _end;
             while (t[uk] != '\n') 
-                uk++;
+                if (++uk == t.size()) 
+                    goto _end;
+            numberString += 1;
             goto start;
     }
 
     if ((t[uk] == '/') && (t[uk + 1] == '*')) { // комментарий начинается с "/*" и до следующей комбинации "*/"
             uk += 2;
-            while ((t[uk] != '*') && (t[uk + 1] != '/')) 
-                uk++;
+            if (uk == t.size()) {
+                printError(errorComment);
+                l = "/**/";
+                return TErr;
+            }
+            while ((t[uk] != '*') && (t[uk + 1] != '/')) {
+                if (t[uk] == '\n') 
+                    numberString += 1;
+                if (++uk == t.size()) {
+                    printError(errorComment);
+                    l = "/**/";
+                    return TErr;
+                }
+            }
+            uk += 2;
             goto start;
     }
 
     if (uk == t.size()) { // конец кода
+        _end:
         l = "#";
         return TEnd; 
     }
 
     // константы
 
+    bool isCut = false;     // проверка - обрезанная константа или нет
+
     if ((t[uk] <= '9') && (t[uk] >= '0')) {
         l += t[uk++];
         while ((t[uk] <= '9') && (t[uk] >= '0'))
             if (l.size() < MAX_LEX) // проверка на длину лексемы, если длинная - обрезать
                 l += t[uk++];
-            else
+            else {
                 uk++;
+                isCut = true;
+            }
+                
 
         if (t[uk] == '.') {
             l += t[uk++];
@@ -92,6 +122,10 @@ int TScaner::scaner(TypeLex &l) {
             goto _exp;    // продолжение константы экспоненциальной
         }
 
+        if (isCut) {
+            printError(errorTruncated, l);
+            return TErr;
+        }
         return TConstInt;   // константа целая
     }
 
@@ -234,24 +268,41 @@ int TScaner::scaner(TypeLex &l) {
     while ((t[uk] <= '9') && (t[uk] >= '0'))
         if (l.size() < MAX_LEX)
             l += t[uk++];
-        else
+        else {
             uk++;
+            isCut = true;
+        }
 
         if ((t[uk] == 'e') || (t[uk] == 'E')) {
-            l += t[uk++];
+            if (l.size() < MAX_LEX)
+                l += t[uk++];
+            else {
+                uk++;
+                isCut = true;
+            }
             goto _exp;
+        }
+        if (isCut) {
+            printError(errorTruncated, l);
+            return TErr;
         }
         return TConstDouble;
     
     _exp:       // продолжение константы после е
     if ((t[uk] == '+') || (t[uk] == '-')) {
-        l += t[uk++];
-
+        if (l.size() < MAX_LEX)
+            l += t[uk++];
+        else {
+                uk++;
+                isCut = true;
+        }
         if ((t[uk] <= '9') && (t[uk] >= '0')) {
             if (l.size() < MAX_LEX)
                 l += t[uk++];
-            else
+            else {
                 uk++;
+                isCut = true;
+            }
             goto continueExpConst;
         }
 
@@ -266,8 +317,14 @@ int TScaner::scaner(TypeLex &l) {
     while ((t[uk] <= '9') && (t[uk] >= '0')) {
         if (l.size() < MAX_LEX)
             l += t[uk++];
-        else
-            uk++;
+        else {
+                uk++;
+                isCut = true;
+        }
+    }
+    if (isCut) {
+            printError(errorTruncated, l);
+            return TErr;
     }
     return TConstExp;
 }

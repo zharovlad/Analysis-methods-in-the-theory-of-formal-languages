@@ -33,6 +33,6 @@ int main () {
     a | 5 == struct1.b & 7;
     (a ^ struct1.b) != 8 >> 3;
     struct2.s.d << 8 <= a;
-    int c <= (b | 1) ^ 3;
-    a != b >= c;
+    int c <= (b | 1) ^ 3
+    a != b >= c
 }
