@@ -22,6 +22,10 @@ TScaner::TScaner(string FileName) {
     numberString = 1;
 }
 
+void TScaner::putString(int s) { numberString = s; }
+
+int TScaner::getStringNumber() { return numberString; }
+
 void TScaner::putUK(int i) { uk=i; } 
 
 int TScaner::getUK() { return uk; }

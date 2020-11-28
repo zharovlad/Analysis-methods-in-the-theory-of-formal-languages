@@ -18,6 +18,9 @@ public:
     int scaner (TypeLex &); // сканирующая функция
     void getData(string);   // получение данных из файла
 
+    int getStringNumber();  // получить номер строки для печати ошибки
+    void putString(int);    // установить номер строки
+
     TScaner(string);
     ~TScaner();
 };

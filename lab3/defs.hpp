@@ -18,6 +18,7 @@ const int Tshort = 11;   // short
 const int Tlong = 12;    // long
 const int Tdouble = 13;  // double
 const int Tstruct = 14;  // struct
+const int Tmain = 15;	 // main
 
 // идентификаторы и константы
 const int Tident = 20;       // идентификатор
