@@ -19,6 +19,7 @@ TScaner::TScaner(string FileName) {
     keyword["long"] = Tlong;
     keyword["double"] = Tdouble; 
     keyword["struct"] = Tstruct;
+    keyword["main"] = Tmain;
     numberString = 1;
 }
 
@@ -260,6 +261,11 @@ int TScaner::scaner(TypeLex &l) {
     else if (t[uk] == '^') {
         l += t[uk++];
         return TBExOr;
+    }
+    // ~
+    else if (t[uk] == '~') {
+    l += t[uk++];
+    return TBNot;
     }
     // символ - ошибка
     else {

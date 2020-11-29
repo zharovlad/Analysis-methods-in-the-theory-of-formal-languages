@@ -52,6 +52,7 @@ const int TBRS = 62;     // >>
 const int TBOR = 63;     // |
 const int TBAnd = 64;    // &
 const int TBExOr = 65;   // ^
+const int TBNot = 66;	 // ~
 
 // конец исходного модуля
 const int TEnd = 100;

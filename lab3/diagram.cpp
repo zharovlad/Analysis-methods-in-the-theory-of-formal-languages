@@ -104,7 +104,6 @@ void TDiagram::Data() {
 	if (lexType != TDC) {
 		PrintError(scan->getStringNumber());
 	}
-
 }
 
 
@@ -154,17 +153,195 @@ void TDiagram::Var() {
 
 void TDiagram::BetwiseOR() {
 	BetwiseXOR();
-	int uk = scan->getUK();				// проверка условия цикла или if требует дополнительного сканирования
-	int str = scan->getStringNumber();	// 2 переменные, чтобы можно было вернуть указатель и номер строки до сканирования
-	TypeLex lex;						// лексема
-	int lexType = scan->scaner(lex);	// тип лексемы
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
 
-	do {
+	while (lexType == TBOR) {
 		BetwiseXOR();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
-	} while (lexType == TBOR);
+	}
 	scan->putUK(uk);
 	scan->putString(str);
+}
+
+void TDiagram::BetwiseXOR() {
+	BetwiseAND();
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+
+	while (lexType == TBExOr) {
+		BetwiseAND();
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+		lexType = scan->scaner(lex);
+	}
+	scan->putUK(uk);
+	scan->putString(str);
+}
+
+void TDiagram::BetwiseAND() {
+	Equal();
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+
+	while (lexType == TBAnd) {
+		Equal();
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+		lexType = scan->scaner(lex);
+	}
+	scan->putUK(uk);
+	scan->putString(str);
+}
+
+void TDiagram::Equal() {
+	Compare();
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+	
+	while (lexType == TEQ || lexType == TNEQ) {
+		Compare();
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+		lexType = scan->scaner(lex);
+	}
+	scan->putUK(uk);
+	scan->putString(str);
+}
+
+void TDiagram::Compare() {
+	Shift();
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+
+	while (lexType >= TLT || lexType <= TGE) {
+		Shift();
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+		lexType = scan->scaner(lex);
+	}
+	scan->putUK(uk);
+	scan->putString(str);
+}
+
+void TDiagram::Shift() {
+	Addition();
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+
+	while (lexType == TBLS || lexType == TBRS) {
+		Addition();
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+		lexType = scan->scaner(lex);
+	}
+	scan->putUK(uk);
+	scan->putString(str);
+}
+
+void TDiagram::Addition() {
+	Multiplication();
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+
+	while (lexType == TPlus || lexType == TMinus) {
+		Multiplication();
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+		lexType = scan->scaner(lex);
+	}
+	scan->putUK(uk);
+	scan->putString(str);
+}
+
+void TDiagram::Multiplication() {
+	BetwiseNOT();
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+
+	while (lexType == TMult || lexType == TDiv) {
+		BetwiseNOT();
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+		lexType = scan->scaner(lex);
+	}
+	scan->putUK(uk);
+	scan->putString(str);
+}
+
+void TDiagram::BetwiseNOT() {
+	Elementary();
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+
+	while (lexType == TBNot) {
+		Elementary();
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+		lexType = scan->scaner(lex);
+	}
+	scan->putUK(uk);
+	scan->putString(str);
+}
+
+void TDiagram::Elementary() {
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+	
+	if (lexType == TConstDouble || lexType == TConstInt || lexType == TConstExp) {
+		return;
+	}
+
+	if (lexType == TLB) {
+		BetwiseOR();
+		lexType = scan->scaner(lex);
+		if (lexType != TRB) {
+			PrintError(scan->getStringNumber());
+		}
+		return;
+	}
+
+	Identifiers();
+}
+
+void TDiagram::CompositeStatement() {	// не доделано!!!!!!
+	int uk;
+	int str;
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+	if (lexType != TFLB) {
+		PrintError(scan->getStringNumber());
+	}
+
+	//while (lexType != TFRB) {
+	//	;
+	//}
+}
+
+void TDiagram::Statement() {
+	;
+}
+
+void TDiagram::ActionsAndConditions() {
+	;
 }
