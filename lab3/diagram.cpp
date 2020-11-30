@@ -21,8 +21,13 @@ void TDiagram::Prog() {					// аксиома
 	TypeLex lex;						// локальная лексема
 	int lexType = scan->scaner(lex);	// тип лексемы
 
-	if (lexType == TEnd)
+	if (lexType == TEnd) // пустая программа
 		return;
+	
+	//
+	// иначе сначала глобальные переменные, потом главная функция
+	//
+
 	scan->putUK(uk);
 	scan->putString(str);
 
@@ -39,12 +44,12 @@ void TDiagram::Prog() {					// аксиома
 	}
 
 	lexType = scan->scaner(lex);
-	if (lexType != TLB) {
+	if (lexType != TLB) {	// (
 		PrintError(scan->getStringNumber());
 	}
 
 	lexType = scan->scaner(lex);
-	if (lexType != TRB) {
+	if (lexType != TRB) {	// )
 		PrintError(scan->getStringNumber());
 	}
 
@@ -52,16 +57,75 @@ void TDiagram::Prog() {					// аксиома
 }
 
 
-void TDiagram::GlobalVar() {			// НЕ ДОДЕЛАНО!!!!!!!
-	
+void TDiagram::GlobalVar() {	// СД глобальных перемен 
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
-	// не понятно до куда проверять
-	// возможно нужно 2 раза проводить сканирование и сравнивать с int main
+	while (lexType >= Tint || lexType <= Tstruct) {
+
+		if (lexType == Tstruct) {	// ветвь описания структуры
+
+			lexType = scan->scaner(lex);
+			if (lexType != Tident) {
+				PrintError(scan->getStringNumber());
+			}
+			
+			lexType = scan->scaner(lex);
+			if (lexType != TFLB) {	// {
+				PrintError(scan->getStringNumber());
+			}
+
+			uk = scan->getUK();
+			str = scan->getStringNumber();
+			lexType = scan->scaner(lex);
+			while (lexType == Tident) {
+				scan->putUK(uk);
+				scan->putString(str);
+				Data();
+				uk = scan->getUK();
+				str = scan->getStringNumber();
+				lexType = scan->scaner(lex);
+			}
+			scan->putUK(uk);
+			scan->putString(str);
+
+			lexType = scan->scaner(lex);
+			if (lexType != TFRB) {	// }
+				PrintError(scan->getStringNumber());
+			}
+
+			lexType = scan->scaner(lex);
+			if (lexType != TDC) {	// ;
+				PrintError(scan->getStringNumber());
+			}
+			uk = scan->getUK();
+			str = scan->getStringNumber();
+			lexType = scan->scaner(lex);
+		}
+		else {
+			if (lexType == Tint) {
+				lexType = scan->scaner(lex);
+				// если int main - возвращаем указатель на позицию перед int и выходим из цикла и GlobalVar, т.к. мы уже в главной функции 
+				// иначе возвращаем указатель на позицию перед int и вызываем Data - описывается глобальная переменная типа int
+				scan->putUK(uk);
+				scan->putString(str);
+				if (lexType == Tmain) {
+					break;
+				}
+			}
+			Data();
+			uk = scan->getUK();
+			str = scan->getStringNumber();
+			lexType = scan->scaner(lex);
+		}
+	}
+	scan->putUK(uk);
+	scan->putString(str);
 }
 
 
-void TDiagram::Identifiers() {
+void TDiagram::Identifiers() {	// СД идентификаторов
 	int uk;
 	int str;
 	TypeLex lex;
@@ -74,13 +138,13 @@ void TDiagram::Identifiers() {
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
-	} while (lexType == TDot);
+	} while (lexType == TDot);	// случай a.b.c.d.e...
 	scan->putUK(uk);
 	scan->putString(str);
 }
 
 
-void TDiagram::Data() {
+void TDiagram::Data() {	// СД данных
 	int uk;
 	int str;
 	TypeLex lex;
@@ -96,18 +160,18 @@ void TDiagram::Data() {
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
-	} while (lexType == TCom);
+	} while (lexType == TCom);	// ,
 	scan->putUK(uk);
 	scan->putString(str);
 	lexType = scan->scaner(lex);
 
-	if (lexType != TDC) {
+	if (lexType != TDC) {	//	;
 		PrintError(scan->getStringNumber());
 	}
 }
 
 
-void TDiagram::Var() {
+void TDiagram::Var() {	// СД переменной
 	int uk;
 	int str;
 	TypeLex lex;
@@ -120,7 +184,7 @@ void TDiagram::Var() {
 	uk = scan->getUK();
 	str = scan->getStringNumber();
 	lexType = scan->scaner(lex);
-	if (lexType != TSave) {
+	if (lexType != TSave) { // если после идентификатора не "=", значит просто выходим - переменная без инициализации
 		scan->putUK(uk);
 		scan->putString(str);
 		return;
@@ -129,36 +193,37 @@ void TDiagram::Var() {
 	uk = scan->getUK();
 	str = scan->getStringNumber();
 	lexType = scan->scaner(lex);
-	if (lexType != TFLB) {
+	if (lexType != TFLB) {	// инициализация переменных
 		scan->putUK(uk);
 		scan->putString(str);
 		BetwiseOR();
 		return;
 	}
 
+	// инициализация структур
 	do {
 		BetwiseOR();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
-	} while (lexType == TCom);
+	} while (lexType == TCom); // .
 	scan->putUK(uk);
 	scan->putString(str);
 
-	if (lexType != TFRB) {
+	if (lexType != TFRB) {	// }
 		PrintError(scan->getStringNumber());
 	}
 }
 
 
-void TDiagram::BetwiseOR() {
+void TDiagram::BetwiseOR() { // СД побитового ИЛИ
 	BetwiseXOR();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType == TBOR) {
+	while (lexType == TBOR) {	// |
 		BetwiseXOR();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -168,14 +233,15 @@ void TDiagram::BetwiseOR() {
 	scan->putString(str);
 }
 
-void TDiagram::BetwiseXOR() {
+
+void TDiagram::BetwiseXOR() {	// СД побитового исключающего ИЛИ
 	BetwiseAND();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType == TBExOr) {
+	while (lexType == TBExOr) {	// ^
 		BetwiseAND();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -185,14 +251,15 @@ void TDiagram::BetwiseXOR() {
 	scan->putString(str);
 }
 
-void TDiagram::BetwiseAND() {
+
+void TDiagram::BetwiseAND() {	// СД побитового И
 	Equal();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType == TBAnd) {
+	while (lexType == TBAnd) {	// &
 		Equal();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -202,14 +269,15 @@ void TDiagram::BetwiseAND() {
 	scan->putString(str);
 }
 
-void TDiagram::Equal() {
+
+void TDiagram::Equal() {	// СД сравнения "=="/"!="
 	Compare();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 	
-	while (lexType == TEQ || lexType == TNEQ) {
+	while (lexType == TEQ || lexType == TNEQ) { // "=="/"!="
 		Compare();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -219,14 +287,15 @@ void TDiagram::Equal() {
 	scan->putString(str);
 }
 
-void TDiagram::Compare() {
+
+void TDiagram::Compare() {	// СД сравнения "<" / "<=" / ">" / ">="
 	Shift();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType >= TLT || lexType <= TGE) {
+	while (lexType >= TLT || lexType <= TGE) { // "<" / "<=" / ">" / ">="
 		Shift();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -236,14 +305,15 @@ void TDiagram::Compare() {
 	scan->putString(str);
 }
 
-void TDiagram::Shift() {
+
+void TDiagram::Shift() {	// СД сдвигов
 	Addition();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType == TBLS || lexType == TBRS) {
+	while (lexType == TBLS || lexType == TBRS) {	// ">>" / "<<"
 		Addition();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -253,14 +323,15 @@ void TDiagram::Shift() {
 	scan->putString(str);
 }
 
-void TDiagram::Addition() {
+
+void TDiagram::Addition() {	// СД сложения (вычитания) 
 	Multiplication();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType == TPlus || lexType == TMinus) {
+	while (lexType == TPlus || lexType == TMinus) {	// "+" / "-"
 		Multiplication();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -270,14 +341,15 @@ void TDiagram::Addition() {
 	scan->putString(str);
 }
 
-void TDiagram::Multiplication() {
+
+void TDiagram::Multiplication() {	// СД умножения (деления)
 	BetwiseNOT();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType == TMult || lexType == TDiv) {
+	while (lexType == TMult || lexType == TDiv) {	// "*" / "/"
 		BetwiseNOT();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -287,14 +359,15 @@ void TDiagram::Multiplication() {
 	scan->putString(str);
 }
 
-void TDiagram::BetwiseNOT() {
+
+void TDiagram::BetwiseNOT() {	// СД побитового НЕ
 	Elementary();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType == TBNot) {
+	while (lexType == TBNot) {	//	~
 		Elementary();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -304,14 +377,18 @@ void TDiagram::BetwiseNOT() {
 	scan->putString(str);
 }
 
-void TDiagram::Elementary() {
+void TDiagram::Elementary() {	// СД элементарного выражения
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 	
+	// константа
 	if (lexType == TConstDouble || lexType == TConstInt || lexType == TConstExp) {
 		return;
 	}
 
+	// выражение в скобках
 	if (lexType == TLB) {
 		BetwiseOR();
 		lexType = scan->scaner(lex);
@@ -320,11 +397,15 @@ void TDiagram::Elementary() {
 		}
 		return;
 	}
-
+	
+	// идентификатор
+	scan->putUK(uk);
+	scan->putString(str);
 	Identifiers();
 }
 
-void TDiagram::CompositeStatement() {	// не доделано!!!!!!
+
+void TDiagram::CompositeStatement() {	// СД составной оператор
 	int uk;
 	int str;
 	TypeLex lex;
@@ -333,15 +414,121 @@ void TDiagram::CompositeStatement() {	// не доделано!!!!!!
 		PrintError(scan->getStringNumber());
 	}
 
-	//while (lexType != TFRB) {
-	//	;
-	//}
+	uk = scan->getUK();
+	str = scan->getStringNumber();
+	int lexType = scan->scaner(lex);
+	while (lexType != TFRB) {
+		// данные
+		if (lexType == Tident) {
+			lexType = scan->scaner(lex);
+			scan->putUK(uk);
+			scan->putString(str);
+			if (lexType != TSave) {
+				Data();
+				uk = scan->getUK();
+				str = scan->getStringNumber();
+				lexType = scan->scaner(lex);
+				continue;
+			}
+		}
+		// опреатор
+		scan->putUK(uk);
+		scan->putString(str);
+		lexType = scan->scaner(lex);
+		do {
+			Statement();
+			uk = scan->getUK();
+			str = scan->getStringNumber();
+			lexType = scan->scaner(lex);
+		} while (lexType == Tident || lexType == TFLB || lexType == Tfor || lexType == TDC);
+		scan->putUK(uk);
+		scan->putString(str);
+	}
 }
 
-void TDiagram::Statement() {
-	;
+void TDiagram::Statement() {	// СД оператор
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+
+	if (lexType == Tident) {	// присваивание 
+		scan->putUK(uk);
+		scan->putString(str);
+		Identifiers();
+		lexType = scan->scaner(lex);
+
+		if (lexType != TSave) {	// =
+			PrintError(scan->getStringNumber());
+		}
+
+		BetwiseOR();
+		lexType = scan->scaner(lex);
+
+		if (lexType != TDC) {	// ;
+			PrintError(scan->getStringNumber());
+		}
+
+	}
+
+	else if (lexType == TFLB) {	// "{" составной оператор
+		scan->putUK(uk);
+		scan->putString(str);
+		CompositeStatement();
+	}
+
+	else if (lexType == Tfor) { // оператор for
+
+		if (lexType == TLB) {	// (
+			PrintError(scan->getStringNumber());
+		}
+
+		ActionsAndConditions();
+
+		if (lexType == TRB) {	// )
+			PrintError(scan->getStringNumber());
+		}
+
+		Statement();
+	}
+
+	else {	// пустой оператор
+		if (lexType != TDC) {	// ;
+			PrintError(scan->getStringNumber());
+		}
+	}
 }
 
-void TDiagram::ActionsAndConditions() {
-	;
+void TDiagram::ActionsAndConditions() {	// операторы цикла for
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+	
+	// действие перед циклом
+	if (lexType != TDC) {	// ;
+		scan->putUK(uk);
+		scan->putString(str);
+		BetwiseOR();
+	}
+
+	if (lexType != TDC) {	// ;
+		PrintError(scan->getStringNumber());
+	}
+
+	// ограничение
+	if (lexType != TDC) {	// ;
+		scan->putUK(uk);
+		scan->putString(str);
+		BetwiseOR();
+	}
+
+	if (lexType != TDC) {	// ;
+		PrintError(scan->getStringNumber());
+	}
+
+	// действие после каждого цикла
+	if (lexType == TConstDouble || lexType == TConstInt || lexType == TConstExp || lexType == Tident || lexType == TLB) {
+		BetwiseOR();
+	}
 }
