@@ -8,9 +8,10 @@ TDiagram::TDiagram(const string fileName) {
 }
 
 
-void TDiagram::PrintError(int stringNumber) {
+void TDiagram::PrintError(int stringNumber, TypeLex lex, TypeLex exp) {
 	cout << endl << "String #" << stringNumber << endl;
-	cout << "Error : unexpected lexem." << endl;
+	cout << "Error unexpected lexem - " << lex << endl;
+	cout << "Expexted lexem - " << exp << endl;
 	exit(2);	// при ошибке - сразу выходим, т.к. наш транслятор работает до первой ошибки
 }
 
@@ -35,22 +36,22 @@ void TDiagram::Prog() {					// аксиома
 
 	lexType = scan->scaner(lex);
 	if (lexType != Tint) {
-		PrintError(scan->getStringNumber());
+		PrintError(scan->getStringNumber(), lex, "int");
 	}
 
 	lexType = scan->scaner(lex);
 	if (lexType != Tmain) {
-		PrintError(scan->getStringNumber());
+		PrintError(scan->getStringNumber(), lex, "main");
 	}
 
 	lexType = scan->scaner(lex);
 	if (lexType != TLB) {	// (
-		PrintError(scan->getStringNumber());
+		PrintError(scan->getStringNumber(), lex, "(");
 	}
 
 	lexType = scan->scaner(lex);
 	if (lexType != TRB) {	// )
-		PrintError(scan->getStringNumber());
+		PrintError(scan->getStringNumber(), lex, ")");
 	}
 
 	CompositeStatement();
@@ -68,18 +69,18 @@ void TDiagram::GlobalVar() {	// СД глобальных перемен
 
 			lexType = scan->scaner(lex);
 			if (lexType != Tident) {
-				PrintError(scan->getStringNumber());
+				PrintError(scan->getStringNumber(), lex, "identifier");
 			}
 			
 			lexType = scan->scaner(lex);
 			if (lexType != TFLB) {	// {
-				PrintError(scan->getStringNumber());
+				PrintError(scan->getStringNumber(), lex, "{");
 			}
 
 			uk = scan->getUK();
 			str = scan->getStringNumber();
 			lexType = scan->scaner(lex);
-			while (lexType == Tident) {
+			while (lexType != TFRB) {
 				scan->putUK(uk);
 				scan->putString(str);
 				Data();
@@ -87,38 +88,29 @@ void TDiagram::GlobalVar() {	// СД глобальных перемен
 				str = scan->getStringNumber();
 				lexType = scan->scaner(lex);
 			}
-			scan->putUK(uk);
-			scan->putString(str);
-
-			lexType = scan->scaner(lex);
-			if (lexType != TFRB) {	// }
-				PrintError(scan->getStringNumber());
-			}
 
 			lexType = scan->scaner(lex);
 			if (lexType != TDC) {	// ;
-				PrintError(scan->getStringNumber());
+				PrintError(scan->getStringNumber(), lex, ";");
 			}
-			uk = scan->getUK();
-			str = scan->getStringNumber();
-			lexType = scan->scaner(lex);
 		}
 		else {
 			if (lexType == Tint) {
 				lexType = scan->scaner(lex);
 				// если int main - возвращаем указатель на позицию перед int и выходим из цикла и GlobalVar, т.к. мы уже в главной функции 
 				// иначе возвращаем указатель на позицию перед int и вызываем Data - описывается глобальная переменная типа int
-				scan->putUK(uk);
-				scan->putString(str);
 				if (lexType == Tmain) {
 					break;
 				}
 			}
+			scan->putUK(uk);
+			scan->putString(str);
 			Data();
-			uk = scan->getUK();
-			str = scan->getStringNumber();
-			lexType = scan->scaner(lex);
 		}
+
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+		lexType = scan->scaner(lex);
 	}
 	scan->putUK(uk);
 	scan->putString(str);
@@ -133,7 +125,7 @@ void TDiagram::Identifiers() {	// СД идентификаторов
 	do {
 		lexType = scan->scaner(lex);
 		if (lexType != Tident) {
-			PrintError(scan->getStringNumber());
+			PrintError(scan->getStringNumber(), lex, "identifier");
 		}
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -152,7 +144,7 @@ void TDiagram::Data() {	// СД данных
 
 	if (lexType < Tint || lexType > Tdouble)
 		if (lexType != Tident) {
-			PrintError(scan->getStringNumber());
+			PrintError(scan->getStringNumber(), lex, "identifier");
 		}
 
 	do {
@@ -166,24 +158,19 @@ void TDiagram::Data() {	// СД данных
 	lexType = scan->scaner(lex);
 
 	if (lexType != TDC) {	//	;
-		PrintError(scan->getStringNumber());
+		PrintError(scan->getStringNumber(), lex, ";");
 	}
 }
 
 
 void TDiagram::Var() {	// СД переменной
-	int uk;
-	int str;
+	Identifiers();
+
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	if (lexType != Tident) {
-		PrintError(scan->getStringNumber());
-	}
-
-	uk = scan->getUK();
-	str = scan->getStringNumber();
-	lexType = scan->scaner(lex);
 	if (lexType != TSave) { // если после идентификатора не "=", значит просто выходим - переменная без инициализации
 		scan->putUK(uk);
 		scan->putString(str);
@@ -196,13 +183,13 @@ void TDiagram::Var() {	// СД переменной
 	if (lexType != TFLB) {	// инициализация переменных
 		scan->putUK(uk);
 		scan->putString(str);
-		BetwiseOR();
+		Assignment();
 		return;
 	}
 
 	// инициализация структур
 	do {
-		BetwiseOR();
+		Assignment();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
@@ -211,10 +198,25 @@ void TDiagram::Var() {	// СД переменной
 	scan->putString(str);
 
 	if (lexType != TFRB) {	// }
-		PrintError(scan->getStringNumber());
+		PrintError(scan->getStringNumber(), lex, "}");
 	}
 }
 
+void TDiagram::Assignment() {	// операция присваивания
+	BetwiseOR();
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	TypeLex lex;
+	int lexType = scan->scaner(lex);
+	while (lexType == TSave) {	//	=
+		BetwiseOR();
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+		lexType = scan->scaner(lex);
+	}
+	scan->putUK(uk);
+	scan->putString(str);
+}
 
 void TDiagram::BetwiseOR() { // СД побитового ИЛИ
 	BetwiseXOR();
@@ -295,7 +297,7 @@ void TDiagram::Compare() {	// СД сравнения "<" / "<=" / ">" / ">="
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType >= TLT || lexType <= TGE) { // "<" / "<=" / ">" / ">="
+	while (lexType >= TLT && lexType <= TGE) { // "<" / "<=" / ">" / ">="
 		Shift();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -377,6 +379,7 @@ void TDiagram::BetwiseNOT() {	// СД побитового НЕ
 	scan->putString(str);
 }
 
+
 void TDiagram::Elementary() {	// СД элементарного выражения
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
@@ -390,10 +393,10 @@ void TDiagram::Elementary() {	// СД элементарного выражения
 
 	// выражение в скобках
 	if (lexType == TLB) {
-		BetwiseOR();
+		Assignment();
 		lexType = scan->scaner(lex);
 		if (lexType != TRB) {
-			PrintError(scan->getStringNumber());
+			PrintError(scan->getStringNumber(), lex, ")");
 		}
 		return;
 	}
@@ -411,19 +414,28 @@ void TDiagram::CompositeStatement() {	// СД составной оператор
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 	if (lexType != TFLB) {
-		PrintError(scan->getStringNumber());
+		PrintError(scan->getStringNumber(), lex, "{");
 	}
 
 	uk = scan->getUK();
 	str = scan->getStringNumber();
-	int lexType = scan->scaner(lex);
+	lexType = scan->scaner(lex);
 	while (lexType != TFRB) {
 		// данные
+		if (lexType >= Tint && lexType <= Tdouble) {
+			scan->putUK(uk);
+			scan->putString(str);
+			Data();
+			uk = scan->getUK();
+			str = scan->getStringNumber();
+			lexType = scan->scaner(lex);
+			continue;
+		}
 		if (lexType == Tident) {
 			lexType = scan->scaner(lex);
 			scan->putUK(uk);
 			scan->putString(str);
-			if (lexType != TSave) {
+			if (lexType != TDot) {
 				Data();
 				uk = scan->getUK();
 				str = scan->getStringNumber();
@@ -431,15 +443,23 @@ void TDiagram::CompositeStatement() {	// СД составной оператор
 				continue;
 			}
 		}
+
 		// опреатор
-		scan->putUK(uk);
-		scan->putString(str);
-		lexType = scan->scaner(lex);
 		do {
+			scan->putUK(uk);
+			scan->putString(str);
 			Statement();
 			uk = scan->getUK();
 			str = scan->getStringNumber();
 			lexType = scan->scaner(lex);
+			if (lexType == Tident) {
+				int _uk = scan->getUK();
+				int _str = scan->getStringNumber();
+				int _lexType = scan->scaner(lex);
+				if (_lexType == Tident) {
+					break;
+				}
+			}
 		} while (lexType == Tident || lexType == TFLB || lexType == Tfor || lexType == TDC);
 		scan->putUK(uk);
 		scan->putString(str);
@@ -459,14 +479,14 @@ void TDiagram::Statement() {	// СД оператор
 		lexType = scan->scaner(lex);
 
 		if (lexType != TSave) {	// =
-			PrintError(scan->getStringNumber());
+			PrintError(scan->getStringNumber(), lex, "=");
 		}
 
-		BetwiseOR();
+		Assignment();
 		lexType = scan->scaner(lex);
 
 		if (lexType != TDC) {	// ;
-			PrintError(scan->getStringNumber());
+			PrintError(scan->getStringNumber(), lex, ";");
 		}
 
 	}
@@ -479,22 +499,24 @@ void TDiagram::Statement() {	// СД оператор
 
 	else if (lexType == Tfor) { // оператор for
 
-		if (lexType == TLB) {	// (
-			PrintError(scan->getStringNumber());
+		lexType = scan->scaner(lex);
+		if (lexType != TLB) {	// (
+			PrintError(scan->getStringNumber(), lex, "(");
 		}
 
 		ActionsAndConditions();
 
-		if (lexType == TRB) {	// )
-			PrintError(scan->getStringNumber());
+		lexType = scan->scaner(lex);
+		if (lexType != TRB) {	// )
+			PrintError(scan->getStringNumber(), lex, ")");
 		}
-
+		
 		Statement();
 	}
 
 	else {	// пустой оператор
 		if (lexType != TDC) {	// ;
-			PrintError(scan->getStringNumber());
+			PrintError(scan->getStringNumber(), lex, ";");
 		}
 	}
 }
@@ -509,26 +531,43 @@ void TDiagram::ActionsAndConditions() {	// операторы цикла for
 	if (lexType != TDC) {	// ;
 		scan->putUK(uk);
 		scan->putString(str);
-		BetwiseOR();
+		if (lexType >= Tint && lexType <= Tstruct || lexType == Tident) {
+			Data();
+		}
+		else {
+			Assignment();
+			uk = scan->getUK();
+			str = scan->getStringNumber();
+			lexType = scan->scaner(lex);
+			if (lexType != TDC) {	// ;
+				PrintError(scan->getStringNumber(), lex, ";");
+			}
+			scan->putUK(uk);
+			scan->putString(str);
+		}
 	}
-
-	if (lexType != TDC) {	// ;
-		PrintError(scan->getStringNumber());
-	}
-
+	uk = scan->getUK();
+	str = scan->getStringNumber();
+	lexType = scan->scaner(lex);
 	// ограничение
 	if (lexType != TDC) {	// ;
 		scan->putUK(uk);
 		scan->putString(str);
-		BetwiseOR();
+		Assignment();
 	}
-
+	lexType = scan->scaner(lex);
 	if (lexType != TDC) {	// ;
-		PrintError(scan->getStringNumber());
+		PrintError(scan->getStringNumber(), lex, ";");
 	}
 
+	uk = scan->getUK();
+	str = scan->getStringNumber();
+	lexType = scan->scaner(lex);
+	scan->putUK(uk);
+	scan->putString(str);
 	// действие после каждого цикла
-	if (lexType == TConstDouble || lexType == TConstInt || lexType == TConstExp || lexType == Tident || lexType == TLB) {
-		BetwiseOR();
+	if (lexType != TRB) {
+		Assignment();
 	}
+	
 }

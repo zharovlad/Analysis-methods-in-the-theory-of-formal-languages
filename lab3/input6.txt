@@ -1,0 +1,11 @@
+struct _struct {
+    int b;
+    short c;
+    long d;
+};
+
+int main () {
+    double a = 22.8e+3 * 3;
+    short array;
+    for int i = 0; i < 100; i = i & 1) 
+}

@@ -189,41 +189,42 @@ int TScaner::scaner(TypeLex &l) {
     }
     // <, <=, <<
     else if (t[uk] == '<') {
-        uk++;
+        l += t[uk++];
         if (t[uk] == '=') {
-            uk++;
+            l += t[uk++];
             return TLE;
         }
         if (t[uk] == '<') {
-            uk++;
+            l += t[uk++];
             return TBLS;
         }
         return TLT;
     }
     // >, >=, >
     else if (t[uk] == '>') {
-        uk++;
+        l += t[uk++];
         if (t[uk] == '=') {
-            uk++;
+            l += t[uk++];
             return TGE;
         }
         if (t[uk] == '>') {
-            uk++;
+            l += t[uk++];
             return TBRS;
         }
         return TGT;
     }
     // =, ==
     else if (t[uk] == '=') {
-        uk++;
+        l += t[uk++];
         if (t[uk] == '=') {
-            uk++;
+            l += t[uk++];
             return TEQ;
         }
         return TSave;
     }
     // !=
     else if (t[uk] == '!' && t[uk + 1] == '=') {
+        l = "!=";
         uk += 2;
         return TNEQ;
     }
@@ -264,8 +265,8 @@ int TScaner::scaner(TypeLex &l) {
     }
     // ~
     else if (t[uk] == '~') {
-    l += t[uk++];
-    return TBNot;
+        l += t[uk++];
+        return TBNot;
     }
     // символ - ошибка
     else {

@@ -1,0 +1,5 @@
+int main () {
+    double a = 22.8e+3 * 3;
+    int c, d, e, f, g;
+    _struct struct1 < b;
+}

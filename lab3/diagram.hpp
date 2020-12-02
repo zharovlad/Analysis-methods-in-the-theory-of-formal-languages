@@ -23,7 +23,8 @@ private:
 	void CompositeStatement();		// составной оператор
 	void Statement();				// оператор
 	void ActionsAndConditions();	// действия и условия для цикла for
-	void PrintError(int);			// печать ошибок
+	void PrintError(int, TypeLex, TypeLex);			// печать ошибок
+	void Assignment();
 
 public:
 	TDiagram(const string);
