@@ -59,4 +59,16 @@ const int TEnd = 100;
 
 // ошибочный символ
 const int TErr = 200;
+
+// лексические ошибки
+const string errorConst = "Incorrect constant";
+const string errorFile = "Input file not found";
+const string errorSymbol = "Incorrect symbol";
+const string errorComment = "Unclosed comment";
+const string errorTruncated = "Truncated constant";
+
+// семантические ошибки
+const string dual = "dual defenition";
+const string notDefine = "not defined";
+const string notInit = ". Trying to access to uninitialized variable";
 #endif

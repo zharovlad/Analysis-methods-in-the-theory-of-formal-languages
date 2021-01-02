@@ -3,13 +3,6 @@
 #include "scaner.hpp"
 #include <fstream>
 
-const string errorConst = "Incorrect constant";
-const string errorFile = "Input file not found";
-const string errorSymbol = "Incorrect symbol";
-const string errorComment = "Unclosed comment";
-const string errorTruncated = "Truncated constant";
-
-
 TScaner::TScaner(string FileName) {
     getData(FileName);
     putUK(0);
@@ -31,21 +24,38 @@ void TScaner::putUK(int i) { uk=i; }
 
 int TScaner::getUK() { return uk; }
 
-void TScaner::printError(string err, string a) {
-    cout << endl << "String #" << numberString << endl;
-    cout << "Error : " << err << " '" << a << "'" << endl;
-}
+void TScaner::printError(const string type, string err="", string a="") {
+    cout << type << " error. " << endl;
+    cout << "String #" << numberString << endl;
 
-void TScaner::printError(string err) {
-    cout << endl << "String #" << numberString << endl;
-    cout << "Error : " << err << endl;    
+    if (type == "Lexical") {
+
+        if (a.empty()) {
+            cout << err << endl;
+        }
+        else {
+            cout << err << " '" << a << "'" << endl << endl;
+        }
+        return;
+    }
+
+    if (type == "Syntax") {
+        cout << "Lexem - " << err << endl;
+        cout << "Expexted lexem - " << a << endl;
+        exit(2);	// при ошибке - сразу выходим, т.к. синтаксический анализатор работает до первой ошибки
+    }
+
+    if (type == "Semant") {
+        cout << "Identifier " << a << " " << err << endl;
+        exit(3);
+    }
 }
 
 void TScaner::getData(string FileName) {
     // ввод данных из текстового файла
     ifstream in (FileName);
     if (!in.is_open()) { 
-        printError(errorFile); 
+        printError("Lexical", errorFile);
         exit(1);
     }
     char symbol;
@@ -79,7 +89,7 @@ int TScaner::scaner(TypeLex &l) {
     if ((t[uk] == '/') && (t[uk + 1] == '*')) { // комментарий начинается с "/*" и до следующей комбинации "*/"
             uk += 2;
             if (uk == t.size()) {
-                printError(errorComment);
+                printError("Lexical", errorComment);
                 l = "/**/";
                 return TErr;
             }
@@ -87,7 +97,7 @@ int TScaner::scaner(TypeLex &l) {
                 if (t[uk] == '\n') 
                     numberString += 1;
                 if (++uk == t.size()) {
-                    printError(errorComment);
+                    printError("Lexical", errorComment);
                     l = "/**/";
                     return TErr;
                 }
@@ -128,7 +138,7 @@ int TScaner::scaner(TypeLex &l) {
         }
 
         if (isCut) {
-            printError(errorTruncated, l);
+            printError("Lexical", errorTruncated, l);
             return TErr;
         }
         return TConstInt;   // константа целая
@@ -271,7 +281,7 @@ int TScaner::scaner(TypeLex &l) {
     // символ - ошибка
     else {
         l += t[uk++];
-        printError(errorSymbol, l);
+        printError("Lexical", errorSymbol, l);
         return TErr;
     }
 
@@ -294,7 +304,7 @@ int TScaner::scaner(TypeLex &l) {
             goto _exp;
         }
         if (isCut) {
-            printError(errorTruncated, l);
+            printError("Lexical", errorTruncated, l);
             return TErr;
         }
         return TConstDouble;
@@ -319,7 +329,7 @@ int TScaner::scaner(TypeLex &l) {
 
         else {
             l += t[uk++];
-            printError(errorConst, l);
+            printError("Lexical", errorConst, l);
             return TErr;
         }
     }
@@ -334,7 +344,7 @@ int TScaner::scaner(TypeLex &l) {
         }
     }
     if (isCut) {
-            printError(errorTruncated, l);
+            printError("Lexical", errorTruncated, l);
             return TErr;
     }
     return TConstExp;

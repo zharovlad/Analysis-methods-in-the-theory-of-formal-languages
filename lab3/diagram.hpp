@@ -1,15 +1,18 @@
 #ifndef __DIAGRAM
 #define __DIAGRAM
 #include "defs.hpp"
+#include "semant.hpp"
 #include "scaner.hpp"
 
 class TDiagram {
 private:
 	TScaner* scan;
+	Tree* root;
+
 	void GlobalVar();				// глобальная переменная
 	void Identifiers();				// идентификаторы
 	void Data();					// данные
-	void Var();						// переменная
+	void Var(int, Tree*);					// переменная
 	void BetwiseOR();				// побитовое или
 	void BetwiseXOR();				// побитовое исключающее или
 	void BetwiseAND();				// побитовое и
@@ -27,6 +30,8 @@ private:
 	void Assignment();
 
 public:
+
+	void PrintSemantTree();
 	TDiagram(const string);
 	~TDiagram();
 	void Prog(); // аксиома

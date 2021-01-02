@@ -1,4 +1,8 @@
+struct c {
+    int c;
+};
+
 int main () {
     double a = 22.8e+3 * 3;
-    int c, d, e, f, g = double a;
+    int c;
 }

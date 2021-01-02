@@ -12,32 +12,27 @@ long s;
 // комментарий другой
 
 struct __struct {
-    _struct s;
+    _struct s, z;
 };
 
 /* комментарий третий
 все тот же третий комментарий
 */
+struct zzzzzz {
+    __struct iop, tre;
+    _struct qwert, tyuiop;
+    double z;
+};
 
 int main () {
-    double a = 22.8e+3 * 3;
+    double a;
     int c, d, e, f, g;
     _struct struct1;
-    struct2.b = 5.9;
-    struct3.d = 8.3;
-    _struct struct1;
-    int a;
-    int b = 3;
-    struct4.s.c = 3;
-    struct2.b = 5;
-    struct3.d = 8;
-    short array;
+    int zzzzzz; 
+    {short array;}
     for (int i = 0; i < 100; i = i & 1) 
         for (short j = 3; j != 8.48; j = j / 10e+1)
-            for (long k = 88; k <= 89; k = k | i)
-                for (int i = 0; i > 100; i = i ~ 1) 
-                    for (short j = 3; j == 8.48; j = j ^ 10e+1)
-                        for (long k = 88; k >= 89; k = k | i)
-                            array = ((array >> j) << k) * 3e-6 - 88 / 33;
+            for (long k = 88; k <= 89; k = k | i);
     // ещё один комментарий
+    zzzzzz struct2;
 }

@@ -1,1 +1,8 @@
-double g = 3 + 3
+int main () {
+    int b; 
+    {short array;}
+    for (int i = 0; i < 100; i = i & 1){
+    int c, d, e; 
+    }
+    long b;
+}

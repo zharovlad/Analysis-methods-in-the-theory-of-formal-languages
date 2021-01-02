@@ -1,20 +1,13 @@
 #include "defs.hpp"
-#include "scaner.hpp"
 #include "diagram.hpp"
 
 
 TDiagram::TDiagram(const string fileName) {
-	scan = new TScaner(fileName);
+	this->scan = new TScaner(fileName);
+	this->root = new Tree();
+	Tree::SetScaner(scan);
+	root->SetPos();
 }
-
-
-void TDiagram::PrintError(int stringNumber, TypeLex lex, TypeLex exp) {
-	cout << endl << "String #" << stringNumber << endl;
-	cout << "Error unexpected lexem - " << lex << endl;
-	cout << "Expexted lexem - " << exp << endl;
-	exit(2);	// при ошибке - сразу выходим, т.к. наш транслятор работает до первой ошибки
-}
-
 
 void TDiagram::Prog() {					// аксиома
 	int uk = scan->getUK();				// проверка условия цикла или if требует дополнительного сканирования
@@ -36,22 +29,24 @@ void TDiagram::Prog() {					// аксиома
 
 	lexType = scan->scaner(lex);
 	if (lexType != Tint) {
-		PrintError(scan->getStringNumber(), lex, "int");
+		scan->printError("Syntax", lex, "int");
 	}
 
 	lexType = scan->scaner(lex);
 	if (lexType != Tmain) {
-		PrintError(scan->getStringNumber(), lex, "main");
+		scan->printError("Syntax", lex, "main");
 	}
+
+	Tree::AddAreaofVisibility(lex);
 
 	lexType = scan->scaner(lex);
 	if (lexType != TLB) {	// (
-		PrintError(scan->getStringNumber(), lex, "(");
+		scan->printError("Syntax", lex, "(");
 	}
 
 	lexType = scan->scaner(lex);
 	if (lexType != TRB) {	// )
-		PrintError(scan->getStringNumber(), lex, ")");
+		scan->printError("Syntax", lex, ")");
 	}
 
 	CompositeStatement();
@@ -69,12 +64,15 @@ void TDiagram::GlobalVar() {	// СД глобальных перемен
 
 			lexType = scan->scaner(lex);
 			if (lexType != Tident) {
-				PrintError(scan->getStringNumber(), lex, "identifier");
+				scan->printError("Syntax", lex, "identifier");
 			}
 			
+			auto tree = Tree::GetPos();
+			tree->AddTypeStruct(lex);
+
 			lexType = scan->scaner(lex);
 			if (lexType != TFLB) {	// {
-				PrintError(scan->getStringNumber(), lex, "{");
+				scan->printError("Syntax", lex, "{");
 			}
 
 			uk = scan->getUK();
@@ -91,8 +89,11 @@ void TDiagram::GlobalVar() {	// СД глобальных перемен
 
 			lexType = scan->scaner(lex);
 			if (lexType != TDC) {	// ;
-				PrintError(scan->getStringNumber(), lex, ";");
+				scan->printError("Syntax", lex, ";");
 			}
+
+			tree->SetPos();
+			Tree::CorrectPos();
 		}
 		else {
 			if (lexType == Tint) {
@@ -122,10 +123,11 @@ void TDiagram::Identifiers() {	// СД идентификаторов
 	int str;
 	TypeLex lex;
 	int lexType;
+
 	do {
 		lexType = scan->scaner(lex);
 		if (lexType != Tident) {
-			PrintError(scan->getStringNumber(), lex, "identifier");
+			scan->printError("Syntax", lex, "identifier");
 		}
 		uk = scan->getUK();
 		str = scan->getStringNumber();
@@ -141,35 +143,51 @@ void TDiagram::Data() {	// СД данных
 	int str;
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
+	int type = lexType;
 
-	if (lexType < Tint || lexType > Tdouble)
+	Tree* struc = nullptr;
+	if (lexType < Tint || lexType > Tdouble) {
 		if (lexType != Tident) {
-			PrintError(scan->getStringNumber(), lex, "identifier");
+			scan->printError("Syntax", lex, "identifier");
 		}
+		struc = Tree::FindUp(Tree::GetPos(), lex);
+		if (struc == nullptr) {
+			scan->printError("Semant", notDefine, lex);
+		}
+	}
 
 	do {
-		Var();
+		Var(type, struc);
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
 	} while (lexType == TCom);	// ,
+
 	scan->putUK(uk);
 	scan->putString(str);
 	lexType = scan->scaner(lex);
 
 	if (lexType != TDC) {	//	;
-		PrintError(scan->getStringNumber(), lex, ";");
+		scan->printError("Syntax", lex, ";");
 	}
 }
 
 
-void TDiagram::Var() {	// СД переменной
-	Identifiers();
+void TDiagram::Var(int type, Tree *struc) {	// СД переменной
 
-	int uk = scan->getUK();
-	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
+
+	if (lexType != Tident) {
+		scan->printError("Syntax", lex, "identifier");
+	}
+	
+	// добавляем переменную в семантическое дерево
+	Tree::AddID(lex, type, struc);
+	
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
+	lexType = scan->scaner(lex);
 
 	if (lexType != TSave) { // если после идентификатора не "=", значит просто выходим - переменная без инициализации
 		scan->putUK(uk);
@@ -198,7 +216,7 @@ void TDiagram::Var() {	// СД переменной
 	scan->putString(str);
 
 	if (lexType != TFRB) {	// }
-		PrintError(scan->getStringNumber(), lex, "}");
+		scan->printError("Syntax", lex, "}");
 	}
 }
 
@@ -396,7 +414,7 @@ void TDiagram::Elementary() {	// СД элементарного выражения
 		Assignment();
 		lexType = scan->scaner(lex);
 		if (lexType != TRB) {
-			PrintError(scan->getStringNumber(), lex, ")");
+			scan->printError("Syntax", lex, ")");
 		}
 		return;
 	}
@@ -414,7 +432,7 @@ void TDiagram::CompositeStatement() {	// СД составной оператор
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 	if (lexType != TFLB) {
-		PrintError(scan->getStringNumber(), lex, "{");
+		scan->printError("Syntax", lex, "{");
 	}
 
 	uk = scan->getUK();
@@ -479,14 +497,14 @@ void TDiagram::Statement() {	// СД оператор
 		lexType = scan->scaner(lex);
 
 		if (lexType != TSave) {	// =
-			PrintError(scan->getStringNumber(), lex, "=");
+			scan->printError("Syntax", lex, "=");
 		}
 
 		Assignment();
 		lexType = scan->scaner(lex);
 
 		if (lexType != TDC) {	// ;
-			PrintError(scan->getStringNumber(), lex, ";");
+			scan->printError("Syntax", lex, ";");
 		}
 
 	}
@@ -494,29 +512,36 @@ void TDiagram::Statement() {	// СД оператор
 	else if (lexType == TFLB) {	// "{" составной оператор
 		scan->putUK(uk);
 		scan->putString(str);
+		Tree* k = Tree::GetPos();
+		Tree::AddAreaofVisibility("");
 		CompositeStatement();
+		k->SetPos();
+		Tree::CorrectPos();
 	}
 
 	else if (lexType == Tfor) { // оператор for
-
+		Tree* k = Tree::GetPos();
+		Tree::AddAreaofVisibility(lex);
 		lexType = scan->scaner(lex);
 		if (lexType != TLB) {	// (
-			PrintError(scan->getStringNumber(), lex, "(");
+			scan->printError("Syntax", lex, "(");
 		}
 
 		ActionsAndConditions();
 
 		lexType = scan->scaner(lex);
 		if (lexType != TRB) {	// )
-			PrintError(scan->getStringNumber(), lex, ")");
+			scan->printError("Syntax", lex, ")");
 		}
 		
 		Statement();
+		k->SetPos();
+		Tree::CorrectPos();
 	}
 
 	else {	// пустой оператор
 		if (lexType != TDC) {	// ;
-			PrintError(scan->getStringNumber(), lex, ";");
+			scan->printError("Syntax", lex, ";");
 		}
 	}
 }
@@ -540,7 +565,7 @@ void TDiagram::ActionsAndConditions() {	// операторы цикла for
 			str = scan->getStringNumber();
 			lexType = scan->scaner(lex);
 			if (lexType != TDC) {	// ;
-				PrintError(scan->getStringNumber(), lex, ";");
+				scan->printError("Syntax", lex, ";");
 			}
 			scan->putUK(uk);
 			scan->putString(str);
@@ -557,7 +582,7 @@ void TDiagram::ActionsAndConditions() {	// операторы цикла for
 	}
 	lexType = scan->scaner(lex);
 	if (lexType != TDC) {	// ;
-		PrintError(scan->getStringNumber(), lex, ";");
+		scan->printError("Syntax", lex, ";");
 	}
 
 	uk = scan->getUK();
@@ -570,4 +595,16 @@ void TDiagram::ActionsAndConditions() {	// операторы цикла for
 		Assignment();
 	}
 	
+}
+
+void TDiagram::PrintSemantTree() {
+	//cout << "TYPE_INT = 1" << endl;
+	//cout << "TYPE_SHORT = 2" << endl;
+	//cout << "TYPE_LONG = 3" << endl;
+	//cout << "TYPE_STRUCT = 4" << endl;
+	//cout << "TYPE_NAME_STRUCT = 5" << endl;
+	//cout << "TYPE_EMPTY = 6" << endl;
+	//cout << "TYPE_MAIN = 7" << endl << endl;
+	
+	root->Print();
 }
