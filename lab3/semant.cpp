@@ -189,7 +189,7 @@ Tree *Tree::FindID(TypeLex lex) {
 }
 
 int Tree::FindIDinStruct(TypeLex id, TypeLex prevID, TypeLex error) {
-    // Ищет идентификатор в структуре, возвращает его тип
+    // Ищет идентификатор в структуре
     Tree *structPlace = FindUp(current, prevID);
     if (structPlace != nullptr) {
         structPlace = FindDownLeft(structPlace->right, id);
@@ -324,10 +324,23 @@ pair<DataType, DataValue> Tree::IntToDouble(pair<DataType, DataValue> value) {
 }
 
 pair<DataType, DataValue> Tree::DoubleToInt(pair<DataType, DataValue> value) {
-    if (value.first = DTYPE_INT) {
+    if (value.first == DTYPE_INT) {
         return value;
     }
     value.first = DTYPE_INT;
     value.second.dataAsInt = value.second.dataAsDouble;
     return value;
 }
+
+Tree* Tree::NextInit(Tree* current, pair<DataType, DataValue> value) {
+    if (current->n->dataType == DTYPE_INT) {
+        value = DoubleToInt(value);
+    }
+    else {
+        value = IntToDouble(value);
+    }
+    current->n->dataValue = new DataValue (value.second);
+    return current->left;
+}
+
+Tree* Tree::GetStructFirstVar() { return right->left; }

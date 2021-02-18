@@ -1,8 +1,35 @@
-struct c {
-    int c;
+struct _struct1 {
+    int b;
+    double c;
 };
 
-int main () {
-    double a = 22.8e+3 * 3;
-    int c;
+int main() {
+    _struct1 s1 = {3, 4.3};
+    _struct1 s2 = {4.5, 80};
+
+    int _40eq40 = 40 == 40;
+    int _40eq41 = 40 == 41;
+    int _50neq50 = 50 != 50;
+    int _50neq51 = 50 != 51;
+
+
+    int _40more40 = 40 > 40;
+    int _40moreoreq40 = 40 >= 40;
+
+    int _45more40 = 45 > 40;
+    int _45moreoreq40 = 45 >= 40;
+
+    int _40more45 = 40 > 45;
+    int _40moreoreq45 = 40 >= 45;
+
+
+    int _40less40 = 40 < 40;
+    int _40lessoreq40 = 40 <= 40;
+
+    int _45less40 = 45 < 40;
+    int _45lessoreq40 = 45 <= 40;
+
+    int _40less45 = 40 < 45;
+    int _40lessoreq45 = 40 <= 45;
+
 }

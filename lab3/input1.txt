@@ -1,31 +1,20 @@
-struct _struct1 {
-    int b;
-    double c;
-};
-
-int globalA = 34;
-int globalB = 345.678;
-int globalC = 3.4e+4;
-
-double globalD = 34;
-double globalE = 345.678;
-double globalF = 3.4e+20;
+int IntA = 1;
+int IntB = 0;
 
 int main () {
-    _struct1 s1;
-    s1.b = 45;
-    s1.c = 35.367898765;
-    
-    _struct1 s2;
-    s2.b = 456.7877;
-    s2.c = 1.87e-3;
 
-    int IntA = 5;
-    double DoubleB = 783.344;
+    int NotIntA = ~IntA;
+    int NotIntB = ~IntB;
 
-    globalF = DoubleB;
-    globalA = globalF;
-    globalC = DoubleB;
-    globalB = IntA;
+    int AOrB = IntA | IntB;
+    int BOrA = IntB | IntA;
 
+    int AAndB = IntA & IntB;
+    int BAndA = IntB & IntA;
+
+    int _0Xor2 = 0 ^ 2;
+
+    int _2LeftShift1 = 2 << 1;
+
+    int _2RightShift1 = 2 >> 1;
 }

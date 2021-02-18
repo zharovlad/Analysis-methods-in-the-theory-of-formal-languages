@@ -85,5 +85,7 @@ public:
     static pair<DataType, DataValue> GetData(vector<string>);
     static pair<DataType, DataValue> IntToDouble(pair<DataType, DataValue> value);
     static pair<DataType, DataValue> DoubleToInt(pair<DataType, DataValue> value);
+    static Tree* NextInit(Tree* , pair<DataType, DataValue>);
+    Tree* GetStructFirstVar();
 
 };

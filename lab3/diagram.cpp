@@ -238,14 +238,16 @@ void TDiagram::Var(int type, Tree *struc, bool needAllocation) {	// СД переменно
 	}
 
 	// инициализация структур
+
+	struc = Tree::FindID(ident[0]);
+	struc = struc->GetStructFirstVar();
 	do {
-		Assignment();
+		pair<DataType, DataValue> dataVar = Assignment();
+		struc = Tree::NextInit(struc, dataVar);
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
-	} while (lexType == TCom); // .
-	scan->putUK(uk);
-	scan->putString(str);
+	} while (lexType == TCom); // ,
 
 	if (lexType != TFRB) {	// }
 		scan->printError("Syntax", lex, "}");
@@ -348,7 +350,60 @@ pair<DataType, DataValue> TDiagram::Equal() {	// СД сравнения "=="/"!="
 	int lexType = scan->scaner(lex);
 	
 	while (lexType == TEQ || lexType == TNEQ) { // "=="/"!="
-		Compare();
+		pair<DataType, DataValue> res2 = Compare();
+		switch (res.first) {
+			
+		case DTYPE_INT:
+			switch (res2.first) {
+			case DTYPE_INT:         
+				if (lexType == TEQ) {	// int == int
+					res.second.dataAsInt = res.second.dataAsInt == res2.second.dataAsInt ? 1 : 0;
+				}
+				else {	// int != int
+					res.second.dataAsInt = res.second.dataAsInt != res2.second.dataAsInt ? 1 : 0;
+				}
+				break;
+			case DTYPE_DOUBLE:      
+				if (lexType == TEQ) {	// int == double
+					res.second.dataAsInt = res.second.dataAsInt == res2.second.dataAsDouble ? 1 : 0;
+				}
+				else {	// int != double
+					res.second.dataAsInt = res.second.dataAsInt != res2.second.dataAsDouble ? 1 : 0;
+				}
+				break;
+			default:
+				break;
+			}
+			break;
+
+		case DTYPE_DOUBLE:
+			switch (res2.first) {
+			case DTYPE_INT:
+				if (lexType == TEQ) {	// double == int
+					res.second.dataAsInt = res.second.dataAsDouble == res2.second.dataAsInt ? 1 : 0;
+				}
+				else {	// double != int
+					res.second.dataAsInt = res.second.dataAsDouble != res2.second.dataAsInt ? 1 : 0;
+				}
+				break;
+			case DTYPE_DOUBLE:
+				if (lexType == TEQ) {	// double == double
+					res.second.dataAsInt = res.second.dataAsDouble == res2.second.dataAsDouble ? 1 : 0;
+				}
+				else {	// double != double
+					res.second.dataAsInt = res.second.dataAsDouble != res2.second.dataAsDouble ? 1 : 0;
+				}
+				break;
+			default:
+				break;
+			}
+			break;
+
+		default:
+			break;
+		}
+
+		res.first = DTYPE_INT;
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
@@ -367,7 +422,81 @@ pair<DataType, DataValue> TDiagram::Compare() {	// СД сравнения "<" / "<=" / ">"
 	int lexType = scan->scaner(lex);
 
 	while (lexType >= TLT && lexType <= TGE) { // "<" / "<=" / ">" / ">="
-		Shift();
+		pair<DataType, DataValue> res2 = Shift();
+		switch (res.first) {
+
+		case DTYPE_INT:
+			switch (res2.first) {
+			case DTYPE_INT:	// int  int
+				if (lexType == TLT) {	// <
+					res.second.dataAsInt = res.second.dataAsInt < res2.second.dataAsInt ? 1 : 0;
+				}
+				else if (lexType == TLE) {	// <=
+					res.second.dataAsInt = res.second.dataAsInt <= res2.second.dataAsInt ? 1 : 0;
+				}
+				else if (lexType == TGT) {	// >
+					res.second.dataAsInt = res.second.dataAsInt > res2.second.dataAsInt ? 1 : 0;
+				}
+				else {	// >=
+					res.second.dataAsInt = res.second.dataAsInt >= res2.second.dataAsInt ? 1 : 0;
+				}
+				break;
+			case DTYPE_DOUBLE:	// int double
+				if (lexType == TLT) {	// <
+					res.second.dataAsInt = res.second.dataAsInt < res2.second.dataAsDouble ? 1 : 0;
+				}
+				else if (lexType == TLE) {	// <=
+					res.second.dataAsInt = res.second.dataAsInt <= res2.second.dataAsDouble ? 1 : 0;
+				}
+				else if (lexType == TGT) {	// >
+					res.second.dataAsInt = res.second.dataAsInt > res2.second.dataAsDouble ? 1 : 0;
+				}
+				else {	// >=
+					res.second.dataAsInt = res.second.dataAsInt >= res2.second.dataAsDouble ? 1 : 0;
+				}
+				break;
+			default:
+				break;
+			}
+			break;
+
+		case DTYPE_DOUBLE:
+			switch (res2.first) {
+			case DTYPE_INT:	// double  int
+				if (lexType == TLT) {	// <
+					res.second.dataAsInt = res.second.dataAsDouble < res2.second.dataAsInt ? 1 : 0;
+				}
+				else if (lexType == TLE) {	// <=
+					res.second.dataAsInt = res.second.dataAsDouble <= res2.second.dataAsInt ? 1 : 0;
+				}
+				else if (lexType == TGT) {	// >
+					res.second.dataAsInt = res.second.dataAsDouble > res2.second.dataAsInt ? 1 : 0;
+				}
+				else {	// >=
+					res.second.dataAsInt = res.second.dataAsDouble >= res2.second.dataAsInt ? 1 : 0;
+				}
+				break;
+			case DTYPE_DOUBLE:	// int double
+				if (lexType == TLT) {	// <
+					res.second.dataAsInt = res.second.dataAsDouble < res2.second.dataAsDouble ? 1 : 0;
+				}
+				else if (lexType == TLE) {	// <=
+					res.second.dataAsInt = res.second.dataAsDouble <= res2.second.dataAsDouble ? 1 : 0;
+				}
+				else if (lexType == TGT) {	// >
+					res.second.dataAsInt = res.second.dataAsDouble > res2.second.dataAsDouble ? 1 : 0;
+				}
+				else {	// >=
+					res.second.dataAsInt = res.second.dataAsDouble >= res2.second.dataAsDouble ? 1 : 0;
+				}
+				break;
+			default:
+				break;
+			}
+			break;
+		}
+
+		res.first = DTYPE_INT;
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
