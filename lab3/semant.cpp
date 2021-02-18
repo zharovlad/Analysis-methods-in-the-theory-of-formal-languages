@@ -1,10 +1,17 @@
 #include "semant.hpp"
-#include <map>
+
 
 TScaner* Tree::scaner = nullptr;
 Tree* Tree::current = nullptr;
 
 map <TypeLex, string> StructNames;
+
+Tree::Tree(Tree* copy) {
+    n = new Node(copy->n);
+    up = current;
+    left = copy->left ? new Tree(copy->left) : nullptr;
+    right = copy->right ? new Tree(copy->right) : nullptr;
+}
 
 Tree::Tree(Node *Data, Tree* u, Tree *l, Tree *r) {
     n = Data;
@@ -15,7 +22,7 @@ Tree::Tree(Node *Data, Tree* u, Tree *l, Tree *r) {
 
 Tree::Tree() {
     n = new Node();
-    n->dataType = TYPE_EMPTY;
+    n->objectType = TYPE_EMPTY;
     n->id = "Start prog";
     up = nullptr;
     left = nullptr;
@@ -30,58 +37,50 @@ void Tree::SetRight(Node *data) {
     right = new Tree(data, this, nullptr, nullptr);
 }
 
-void Tree::Print() {
-    // Печать всего дерева ( корень - правый потомок - левый потомок).
-    // Такой выбор вывода обусловлен удобством чтения переменных одной области видимости.
+void Tree::Print(string prefix) {
 
     string type;
-    switch (n->dataType) {
-    case TYPE_EMPTY:
-        type = "empty";
-        break;
+    string sData = "";
+    
+    switch (n->objectType) {
     case TYPE_INT:
         type = "int";
+        sData += " = " + to_string(n->dataValue->dataAsInt);
         break;
     case TYPE_DOUBLE:
         type = "double";
-        break;
-    case TYPE_LONG:
-        type = "long";
+        sData += " = " + to_string(n->dataValue->dataAsDouble);
         break;
     case TYPE_NAME_STRUCT:
         type = StructNames[n->id];
         break;
-    case TYPE_SHORT:
-        type = "short";
-        break;
-    case TYPE_STRUCT:
-        type = "struct";
-        break;
     case TYPE_COMPOSITE_STATEMENT:
-        type = "composite statement";
+        type = "";
         break;
     case TYPE_FOR:
-        type = "for";
+        type = "";
         break;
     case TYPE_MAIN:
-        type = "main";
+        type = "";
         break;
+    default:
+        if (left != nullptr)
+            left->Print();
+        return;
     }
-
-    cout << type << " " << n->id << " " << endl;
-
-    if (right != nullptr)
-        cout << "Right " << right->n->id << endl;
-
-    if (left != nullptr)
-        cout << "Left " << left->n->id << endl;
-
-    cout << endl;
-
-    if (right != nullptr)
-        right->Print();
-    if (left != nullptr)
-        left->Print();
+    cout << type << " " << prefix + n->id << sData << ", ";
+    if (n->objectType == TYPE_NAME_STRUCT) {
+        if (right != nullptr)
+            right->left->Print(prefix + n->id + ".");
+        if (left != nullptr)
+            left->Print(prefix);
+    }
+    else {
+        if (right != nullptr)
+            right->Print(prefix);
+        if (left != nullptr)
+            left->Print(prefix);
+    }
 }
 
 Tree *Tree::FindUp(Tree *from, TypeLex id) {
@@ -133,42 +132,43 @@ void Tree::CorrectPos() {
     current = current->left;
 }
 
-void Tree::AddID(TypeLex lex, int type, Tree *struc) {
+void Tree::AddID(TypeLex lex, int type, DataType dataType, Tree *struc, bool needAllocation) {
     // добавление переменной 
 
     if (FindOneLevel(current, lex) != nullptr) {
         scaner->printError("Semant", dual, lex);
     }
 
-    switch (type) {
+    Node* newVariable = new Node();
+    newVariable->objectType = type;
+    newVariable->id = lex;
+    newVariable->dataType = dataType;
 
-    case Tint:
-        type = TYPE_INT;
-        break;
-    case Tshort:
-        type = TYPE_SHORT;
-        break;
-    case Tlong:
-        type = TYPE_LONG;
-        break;
-    case Tdouble:
-        type = TYPE_DOUBLE;
-        break;
-    case Tident:
-        type = TYPE_NAME_STRUCT;
-        break;
+    if (needAllocation) {
+        if (dataType == DTYPE_INT) {
+            newVariable->dataValue->dataAsInt = 0;
+        }
+        else if (dataType == DTYPE_DOUBLE) {
+            newVariable->dataValue->dataAsDouble = 0.1e-15;
+        }
     }
 
-    Node* newVariable = new Node();
-    newVariable->dataType = type;
-    newVariable->id = lex;
     current->SetLeft(newVariable);
     current = current->left;
 
     if (type == TYPE_NAME_STRUCT) {
         StructNames[lex] = struc->n->id;
-        current->right = struc->right;
+        if (needAllocation) {
+            MemoryAllocation(struc);
+        }
+        else {
+            current->right = struc->right;
+        }
     }
+}
+
+void Tree::MemoryAllocation(Tree *struc) {
+    current->right = new Tree(struc->right);
 }
 
 void Tree::AddTypeStruct(TypeLex lex) {
@@ -207,16 +207,16 @@ void Tree::AddAreaofVisibility(TypeLex block) {
     node->id = block;
 
     if (block == "for")
-        node->dataType = TYPE_FOR;
+        node->objectType = TYPE_FOR;
     else if (block.empty()) {
-        node->dataType = TYPE_COMPOSITE_STATEMENT;
+        node->objectType = TYPE_COMPOSITE_STATEMENT;
         block = "composite statement";
         node->id = block;
     }
     else if (block == "main")
-        node->dataType = TYPE_MAIN;
+        node->objectType = TYPE_MAIN;
     else {
-        node->dataType = TYPE_STRUCT;
+        node->objectType = TYPE_STRUCT;
     }
 
     current->SetLeft(node);
@@ -229,7 +229,87 @@ void Tree::AddAreaofVisibility(TypeLex block) {
 void Tree::AddEmpty(TypeLex lex) {
     // Добавляет пустую вершину для новой области видимости
     Node* empty = new Node();
-    empty->dataType = TYPE_EMPTY;
+    empty->objectType = TYPE_EMPTY;
     empty->id = lex;
     this->SetRight(empty);
+}
+
+void Tree::FreeMemory() {
+    // освобождаем память
+    Tree* temp = current;
+    current = current->up;
+    while (temp->n->objectType != TYPE_EMPTY) {
+        delete(temp);
+        temp = current;
+        current = current->up;
+    }
+    delete(temp);
+    temp = current;
+    current = current->up;
+    delete(temp);
+    current->left = nullptr;
+}
+
+void Tree::SetData(vector<string> ident, DataType newDataType, DataValue newDataValue) {
+    // присваивание
+    Tree* tree = Tree::FindID(ident[0]);
+    if (ident.size() > 1) {
+        for (int i = 1; i < ident.size(); i++) {
+            tree = Tree::FindDownLeft(tree->right, ident[i]);
+        }
+    }
+
+    switch (tree->n->dataType) {
+
+    case DTYPE_INT:
+        switch (newDataType) {
+        case DTYPE_INT:         // int = int
+            tree->n->dataValue->dataAsInt = newDataValue.dataAsInt;
+            break;
+        case DTYPE_DOUBLE:      // int = double
+            tree->n->dataValue->dataAsInt = newDataValue.dataAsDouble;
+            break;
+        default:
+            break;
+        }
+        break;
+
+    case DTYPE_DOUBLE:
+        switch (newDataType) {
+        case DTYPE_INT:         // double = int
+            tree->n->dataValue->dataAsDouble = newDataValue.dataAsInt;
+            break;
+        case DTYPE_DOUBLE:      // double = double
+            tree->n->dataValue->dataAsDouble = newDataValue.dataAsDouble;
+            break;
+        default:
+            break;
+        }
+        break;
+
+    default:
+        break;
+    }
+
+}
+
+pair<DataType, DataValue> Tree::GetData(vector<string> ident) {
+    Tree* tree = Tree::FindID(ident[0]);
+    if (ident.size() > 1) {
+        for (int i = 1; i < ident.size(); i++) {
+            tree = Tree::FindDownLeft(tree->right, ident[i]);
+        }
+    }
+    DataValue dataValue;
+    switch (tree->n->dataType) {
+    case DTYPE_DOUBLE:
+        dataValue.dataAsDouble = tree->n->dataValue->dataAsDouble;
+        break;
+    case DTYPE_INT:
+        dataValue.dataAsInt = tree->n->dataValue->dataAsInt;
+        break;
+    default:
+        break;
+    }
+    return make_pair(tree->n->dataType, dataValue);
 }

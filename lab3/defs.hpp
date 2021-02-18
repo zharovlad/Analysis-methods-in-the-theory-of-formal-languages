@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <map>
+#include <vector>
+
 using namespace std;
 
 const int MAX_LEX = 100;         // максимальная длина лексемы
@@ -71,4 +73,5 @@ const string errorTruncated = "Truncated constant";
 const string dual = "dual defenition";
 const string notDefine = "not defined";
 const string notInit = ". Trying to access to uninitialized variable";
+
 #endif

@@ -9,6 +9,7 @@ TDiagram::TDiagram(const string fileName) {
 	root->SetPos();
 }
 
+
 void TDiagram::Prog() {					// аксиома
 	int uk = scan->getUK();				// проверка условия цикла или if требует дополнительного сканирования
 	int str = scan->getStringNumber();	// 2 переменные, чтобы можно было вернуть указатель и номер строки до сканирования
@@ -81,7 +82,7 @@ void TDiagram::GlobalVar() {	// СД глобальных перемен
 			while (lexType != TFRB) {
 				scan->putUK(uk);
 				scan->putString(str);
-				Data();
+				Data(false);
 				uk = scan->getUK();
 				str = scan->getStringNumber();
 				lexType = scan->scaner(lex);
@@ -115,30 +116,37 @@ void TDiagram::GlobalVar() {	// СД глобальных перемен
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+
+	PrintSemantTree("after global variables");
 }
 
 
-void TDiagram::Identifiers() {	// СД идентификаторов
+vector<string> TDiagram::Identifiers() {	// СД идентификаторов
 	int uk;
 	int str;
 	TypeLex lex;
 	int lexType;
+
+	vector<string> result;
 
 	do {
 		lexType = scan->scaner(lex);
 		if (lexType != Tident) {
 			scan->printError("Syntax", lex, "identifier");
 		}
+		result.push_back(lex);
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
 	} while (lexType == TDot);	// случай a.b.c.d.e...
 	scan->putUK(uk);
 	scan->putString(str);
+
+	return result;
 }
 
 
-void TDiagram::Data() {	// СД данных
+void TDiagram::Data(bool needAllocation) {	// СД данных
 	int uk;
 	int str;
 	TypeLex lex;
@@ -157,7 +165,7 @@ void TDiagram::Data() {	// СД данных
 	}
 
 	do {
-		Var(type, struc);
+		Var(type, struc, needAllocation);
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
@@ -173,7 +181,7 @@ void TDiagram::Data() {	// СД данных
 }
 
 
-void TDiagram::Var(int type, Tree *struc) {	// СД переменной
+void TDiagram::Var(int type, Tree *struc, bool needAllocation) {	// СД переменной
 
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
@@ -181,9 +189,32 @@ void TDiagram::Var(int type, Tree *struc) {	// СД переменной
 	if (lexType != Tident) {
 		scan->printError("Syntax", lex, "identifier");
 	}
-	
+	vector<string> ident = { lex };
+
+	DataType dataType = DTYPE_UNKNOWN;
+
+	switch (type) {
+
+	case Tint:
+		type = TYPE_INT;
+		dataType = DTYPE_INT;
+		break;
+	case Tshort:
+		type = TYPE_SHORT;
+		break;
+	case Tlong:
+		type = TYPE_LONG;
+		break;
+	case Tdouble:
+		type = TYPE_DOUBLE;
+		dataType = DTYPE_DOUBLE;
+		break;
+	case Tident:
+		type = TYPE_NAME_STRUCT;
+		break;
+	}
 	// добавляем переменную в семантическое дерево
-	Tree::AddID(lex, type, struc);
+	Tree::AddID(lex, type, dataType, struc, needAllocation);
 	
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
@@ -201,7 +232,8 @@ void TDiagram::Var(int type, Tree *struc) {	// СД переменной
 	if (lexType != TFLB) {	// инициализация переменных
 		scan->putUK(uk);
 		scan->putString(str);
-		Assignment();
+		pair<DataType, DataValue> dataVar = Assignment();
+		Tree::SetData(ident, dataVar.first, dataVar.second);
 		return;
 	}
 
@@ -220,8 +252,9 @@ void TDiagram::Var(int type, Tree *struc) {	// СД переменной
 	}
 }
 
-void TDiagram::Assignment() {	// операция присваивания
-	BetwiseOR();
+
+pair<DataType, DataValue> TDiagram::Assignment() {	// операция присваивания
+	pair<DataType, DataValue> res = BetwiseOR();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -234,10 +267,12 @@ void TDiagram::Assignment() {	// операция присваивания
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+	return res;
 }
 
-void TDiagram::BetwiseOR() { // СД побитового ИЛИ
-	BetwiseXOR();
+
+pair<DataType, DataValue> TDiagram::BetwiseOR() { // СД побитового ИЛИ
+	pair<DataType, DataValue> res = BetwiseXOR();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -251,11 +286,12 @@ void TDiagram::BetwiseOR() { // СД побитового ИЛИ
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+	return res;
 }
 
 
-void TDiagram::BetwiseXOR() {	// СД побитового исключающего ИЛИ
-	BetwiseAND();
+pair<DataType, DataValue> TDiagram::BetwiseXOR() {	// СД побитового исключающего ИЛИ
+	pair<DataType, DataValue> res = BetwiseAND();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -269,11 +305,12 @@ void TDiagram::BetwiseXOR() {	// СД побитового исключающего ИЛИ
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+	return res;
 }
 
 
-void TDiagram::BetwiseAND() {	// СД побитового И
-	Equal();
+pair<DataType, DataValue> TDiagram::BetwiseAND() {	// СД побитового И
+	pair<DataType, DataValue> res = Equal();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -287,11 +324,12 @@ void TDiagram::BetwiseAND() {	// СД побитового И
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+	return res;
 }
 
 
-void TDiagram::Equal() {	// СД сравнения "=="/"!="
-	Compare();
+pair<DataType, DataValue> TDiagram::Equal() {	// СД сравнения "=="/"!="
+	pair<DataType, DataValue> res = Compare();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -305,11 +343,12 @@ void TDiagram::Equal() {	// СД сравнения "=="/"!="
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+	return res;
 }
 
 
-void TDiagram::Compare() {	// СД сравнения "<" / "<=" / ">" / ">="
-	Shift();
+pair<DataType, DataValue> TDiagram::Compare() {	// СД сравнения "<" / "<=" / ">" / ">="
+	pair<DataType, DataValue> res = Shift();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -323,11 +362,12 @@ void TDiagram::Compare() {	// СД сравнения "<" / "<=" / ">" / ">="
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+	return res;
 }
 
 
-void TDiagram::Shift() {	// СД сдвигов
-	Addition();
+pair<DataType, DataValue> TDiagram::Shift() {	// СД сдвигов
+	pair<DataType, DataValue> res = Addition();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -341,11 +381,12 @@ void TDiagram::Shift() {	// СД сдвигов
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+	return res;
 }
 
 
-void TDiagram::Addition() {	// СД сложения (вычитания) 
-	Multiplication();
+pair<DataType, DataValue> TDiagram::Addition() {	// СД сложения (вычитания) 
+	pair<DataType, DataValue> res = Multiplication();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -359,11 +400,12 @@ void TDiagram::Addition() {	// СД сложения (вычитания)
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+	return res;
 }
 
 
-void TDiagram::Multiplication() {	// СД умножения (деления)
-	BetwiseNOT();
+pair<DataType, DataValue> TDiagram::Multiplication() {	// СД умножения (деления)
+	pair<DataType, DataValue> res = BetwiseNOT();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -377,11 +419,12 @@ void TDiagram::Multiplication() {	// СД умножения (деления)
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+	return res;
 }
 
 
-void TDiagram::BetwiseNOT() {	// СД побитового НЕ
-	Elementary();
+pair<DataType, DataValue> TDiagram::BetwiseNOT() {	// СД побитового НЕ
+	pair<DataType, DataValue> res = Elementary();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -395,19 +438,38 @@ void TDiagram::BetwiseNOT() {	// СД побитового НЕ
 	}
 	scan->putUK(uk);
 	scan->putString(str);
+	return res;
 }
 
 
-void TDiagram::Elementary() {	// СД элементарного выражения
+pair<DataType, DataValue> TDiagram::Elementary() {	// СД элементарного выражения
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 	
+	DataType dataType;
+	DataValue dataValue;
+	istringstream iss(lex, istringstream::in);
 	// константа
-	if (lexType == TConstDouble || lexType == TConstInt || lexType == TConstExp) {
-		return;
+	switch (lexType)
+	{
+	case TConstDouble:
+		dataType = DTYPE_DOUBLE;
+		iss >> dataValue.dataAsDouble;
+		return make_pair(dataType, dataValue);
+	case TConstInt:
+		dataType = DTYPE_INT;
+		iss >> dataValue.dataAsInt;
+		return make_pair(dataType, dataValue);
+	case TConstExp:
+		dataType = DTYPE_DOUBLE;
+		iss >> dataValue.dataAsDouble;
+		return make_pair(dataType, dataValue);
+	default:
+		break;
 	}
+		
 
 	// выражение в скобках
 	if (lexType == TLB) {
@@ -416,17 +478,20 @@ void TDiagram::Elementary() {	// СД элементарного выражения
 		if (lexType != TRB) {
 			scan->printError("Syntax", lex, ")");
 		}
-		return;
+		return make_pair(dataType, dataValue);	/////////////////////////////////////// заглушка
 	}
 	
 	// идентификатор
 	scan->putUK(uk);
 	scan->putString(str);
-	Identifiers();
+	vector<string> ident = Identifiers();
+	
+	return Tree::GetData(ident);
 }
 
 
 void TDiagram::CompositeStatement() {	// СД составной оператор
+	PrintSemantTree("before composite statement");
 	int uk;
 	int str;
 	TypeLex lex;
@@ -453,12 +518,17 @@ void TDiagram::CompositeStatement() {	// СД составной оператор
 			lexType = scan->scaner(lex);
 			scan->putUK(uk);
 			scan->putString(str);
-			if (lexType != TDot) {
-				Data();
-				uk = scan->getUK();
-				str = scan->getStringNumber();
-				lexType = scan->scaner(lex);
-				continue;
+			if (lexType == TSave) {
+				;
+			}
+			else {
+				if (lexType != TDot) {
+					Data();
+					uk = scan->getUK();
+					str = scan->getStringNumber();
+					lexType = scan->scaner(lex);
+					continue;
+				}
 			}
 		}
 
@@ -482,7 +552,11 @@ void TDiagram::CompositeStatement() {	// СД составной оператор
 		scan->putUK(uk);
 		scan->putString(str);
 	}
+	PrintSemantTree("in composite statement");
+	Tree::FreeMemory();
+	PrintSemantTree("after composite statement");
 }
+
 
 void TDiagram::Statement() {	// СД оператор
 	int uk = scan->getUK();
@@ -493,14 +567,15 @@ void TDiagram::Statement() {	// СД оператор
 	if (lexType == Tident) {	// присваивание 
 		scan->putUK(uk);
 		scan->putString(str);
-		Identifiers();
+		vector<string> ident = Identifiers();
 		lexType = scan->scaner(lex);
 
 		if (lexType != TSave) {	// =
 			scan->printError("Syntax", lex, "=");
 		}
 
-		Assignment();
+		pair<DataType, DataValue> dataVar = Assignment();
+		Tree::SetData(ident, dataVar.first, dataVar.second);
 		lexType = scan->scaner(lex);
 
 		if (lexType != TDC) {	// ;
@@ -516,10 +591,11 @@ void TDiagram::Statement() {	// СД оператор
 		Tree::AddAreaofVisibility("");
 		CompositeStatement();
 		k->SetPos();
-		Tree::CorrectPos();
+		//Tree::CorrectPos();
 	}
 
 	else if (lexType == Tfor) { // оператор for
+		PrintSemantTree("before for");
 		Tree* k = Tree::GetPos();
 		Tree::AddAreaofVisibility(lex);
 		lexType = scan->scaner(lex);
@@ -533,10 +609,28 @@ void TDiagram::Statement() {	// СД оператор
 		if (lexType != TRB) {	// )
 			scan->printError("Syntax", lex, ")");
 		}
+
+		uk = scan->getUK();
+		lexType = scan->scaner(lex);
+		str = scan->getStringNumber();
+
+		if (lexType >= Tint && lexType <= Tstruct) {
+			scan->putUK(uk);
+			scan->putString(str);
+			Data();
+		}
+		else {
+			scan->putUK(uk);
+			scan->putString(str);
+			Statement();
+		}
+
+		PrintSemantTree("in for");
+		Tree::FreeMemory();
+		PrintSemantTree("after for");
 		
-		Statement();
 		k->SetPos();
-		Tree::CorrectPos();
+		//Tree::CorrectPos();
 	}
 
 	else {	// пустой оператор
@@ -545,6 +639,7 @@ void TDiagram::Statement() {	// СД оператор
 		}
 	}
 }
+
 
 void TDiagram::ActionsAndConditions() {	// операторы цикла for
 	int uk = scan->getUK();
@@ -579,11 +674,12 @@ void TDiagram::ActionsAndConditions() {	// операторы цикла for
 		scan->putUK(uk);
 		scan->putString(str);
 		Assignment();
+		lexType = scan->scaner(lex);
+		if (lexType != TDC) {	// ;
+			scan->printError("Syntax", lex, ";");
+		}
 	}
-	lexType = scan->scaner(lex);
-	if (lexType != TDC) {	// ;
-		scan->printError("Syntax", lex, ";");
-	}
+	
 
 	uk = scan->getUK();
 	str = scan->getStringNumber();
@@ -594,17 +690,11 @@ void TDiagram::ActionsAndConditions() {	// операторы цикла for
 	if (lexType != TRB) {
 		Assignment();
 	}
-	
 }
 
-void TDiagram::PrintSemantTree() {
-	//cout << "TYPE_INT = 1" << endl;
-	//cout << "TYPE_SHORT = 2" << endl;
-	//cout << "TYPE_LONG = 3" << endl;
-	//cout << "TYPE_STRUCT = 4" << endl;
-	//cout << "TYPE_NAME_STRUCT = 5" << endl;
-	//cout << "TYPE_EMPTY = 6" << endl;
-	//cout << "TYPE_MAIN = 7" << endl << endl;
-	
+void TDiagram::PrintSemantTree(string info) {
+	static int count = 1;
+	cout << count++ << " position " << info << endl;
 	root->Print();
+	cout << endl << endl;
 }

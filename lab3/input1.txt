@@ -1,38 +1,31 @@
-struct _struct {
+struct _struct1 {
     int b;
-    short c;
-    long d;
+    double c;
 };
 
-int i = 9 + 4;
-double g = 6 - 3;
-long s;
+int globalA = 34;
+int globalB = 345.678;
+int globalC = 3.4e+4;
 
-/* комментарий такой */
-// комментарий другой
-
-struct __struct {
-    _struct s, z;
-};
-
-/* комментарий третий
-все тот же третий комментарий
-*/
-struct zzzzzz {
-    __struct iop, tre;
-    _struct qwert, tyuiop;
-    double z;
-};
+double globalD = 34;
+double globalE = 345.678;
+double globalF = 3.4e+20;
 
 int main () {
-    double a;
-    int c, d, e, f, g;
-    _struct struct1;
-    int zzzzzz; 
-    {short array;}
-    for (int i = 0; i < 100; i = i & 1) 
-        for (short j = 3; j != 8.48; j = j / 10e+1)
-            for (long k = 88; k <= 89; k = k | i);
-    // ещё один комментарий
-    zzzzzz struct2;
+    _struct1 s1;
+    s1.b = 45;
+    s1.c = 35.367898765;
+    
+    _struct1 s2;
+    s2.b = 456.7877;
+    s2.c = 1.87e-3;
+
+    int IntA = 5;
+    double DoubleB = 783.344;
+
+    globalF = DoubleB;
+    globalA = globalF;
+    globalC = DoubleB;
+    globalB = IntA;
+
 }

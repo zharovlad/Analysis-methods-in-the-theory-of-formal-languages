@@ -13,16 +13,37 @@ enum TypeObject {
     TYPE_FOR,
 };
 
+// реализованы только 2 типа данных, остальные unknown
+enum DataType {
+    DTYPE_UNKNOWN = 0,
+    DTYPE_INT,
+    DTYPE_DOUBLE,
+};
+
+union DataValue {
+    int dataAsInt;
+    double dataAsDouble;
+};
+
 struct Node {
     TypeLex id;             // Идентификатор переменной
-    int dataType;           // Тип переменной
-    
-             //   дополнительные  возможности:
-    
-    Node() {    }
-    Node(const Node* copy) {
-        this->id = copy->id;
-        this->dataType = copy->dataType;
+    int objectType;         // Тип переменной
+    DataType dataType;      // Тип данных
+    DataValue* dataValue = new DataValue();   // Данные
+
+    Node() {}
+
+    Node(Node* copy) {
+        id = copy->id;
+        objectType = copy->objectType;
+        dataType = copy->dataType;
+        dataValue = new DataValue();
+        if (dataType == DTYPE_DOUBLE) {
+            dataValue->dataAsDouble = 0.1e-15;
+        }
+        else if (dataType == DTYPE_INT) {
+            dataValue->dataAsInt = 0;
+        }
     }
 };
 
@@ -36,11 +57,12 @@ private:
 public:
     
     Tree(Node *, Tree *, Tree *, Tree *);
+    Tree(Tree*);
     Tree();
 
     void SetLeft(Node *);
     void SetRight(Node *);
-    void Print();
+    void Print(string prefix = "");
 
     static Tree *FindUp(Tree *, TypeLex);
     static Tree *FindOneLevel(Tree *, TypeLex);
@@ -51,10 +73,15 @@ public:
     static void CorrectPos();
     void SetPos();
 
-    static void AddID(TypeLex, int, Tree*);
+    static void AddID(TypeLex, int, DataType, Tree*, bool);
     static void AddTypeStruct(TypeLex);
-    Tree *FindID(TypeLex);
+    static Tree *FindID(TypeLex);
     static int FindIDinStruct(TypeLex, TypeLex, TypeLex);
     static void AddAreaofVisibility(TypeLex);
     void AddEmpty(TypeLex);
+    static void MemoryAllocation(Tree*);
+    static void FreeMemory();
+    static void SetData(vector<string>, DataType, DataValue);
+    static pair<DataType, DataValue> GetData(vector<string>);
+
 };
