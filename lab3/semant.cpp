@@ -313,3 +313,21 @@ pair<DataType, DataValue> Tree::GetData(vector<string> ident) {
     }
     return make_pair(tree->n->dataType, dataValue);
 }
+
+pair<DataType, DataValue> Tree::IntToDouble(pair<DataType, DataValue> value) {
+    if (value.first == DTYPE_DOUBLE) {
+        return value;
+    }
+    value.first = DTYPE_DOUBLE;
+    value.second.dataAsDouble = value.second.dataAsInt;
+    return value;
+}
+
+pair<DataType, DataValue> Tree::DoubleToInt(pair<DataType, DataValue> value) {
+    if (value.first = DTYPE_INT) {
+        return value;
+    }
+    value.first = DTYPE_INT;
+    value.second.dataAsInt = value.second.dataAsDouble;
+    return value;
+}

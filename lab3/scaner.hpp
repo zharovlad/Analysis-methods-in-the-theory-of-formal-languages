@@ -13,7 +13,7 @@ private:
 public:
     void putUK (int i);     // установить значение указателя
     int getUK ();       // получить значение указателя
-    void printError(const string, string, string);    // выдать сообщение об ошибке
+    void printError(const string type, string err = "", string a = "");    // выдать сообщение об ошибке
     int scaner (TypeLex &); // сканирующая функция
     void getData(string);   // получение данных из файла
 

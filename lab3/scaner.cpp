@@ -24,7 +24,7 @@ void TScaner::putUK(int i) { uk=i; }
 
 int TScaner::getUK() { return uk; }
 
-void TScaner::printError(const string type, string err="", string a="") {
+void TScaner::printError(const string type, string err, string a) {
     cout << type << " error. " << endl;
     cout << "String #" << numberString << endl;
 
@@ -48,6 +48,10 @@ void TScaner::printError(const string type, string err="", string a="") {
     if (type == "Semant") {
         cout << "Identifier " << a << " " << err << endl;
         exit(3);
+    }
+
+    if (type == "Wrong type") {
+        cout << "Type must be int" << endl;
     }
 }
 

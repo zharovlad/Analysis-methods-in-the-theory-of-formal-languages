@@ -260,7 +260,7 @@ pair<DataType, DataValue> TDiagram::Assignment() {	// операция присваивания
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 	while (lexType == TSave) {	//	=
-		BetwiseOR();
+		res = BetwiseOR();
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
@@ -279,7 +279,11 @@ pair<DataType, DataValue> TDiagram::BetwiseOR() { // СД побитового ИЛИ
 	int lexType = scan->scaner(lex);
 
 	while (lexType == TBOR) {	// |
-		BetwiseXOR();
+		pair<DataType, DataValue> res2 = BetwiseXOR();
+		if (res.first == DTYPE_DOUBLE || res2.first == DTYPE_DOUBLE) {
+			scan->printError("Wrong type");
+		}
+		res.second.dataAsInt = res.second.dataAsInt | res2.second.dataAsInt;
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
@@ -298,7 +302,11 @@ pair<DataType, DataValue> TDiagram::BetwiseXOR() {	// СД побитового исключающего
 	int lexType = scan->scaner(lex);
 
 	while (lexType == TBExOr) {	// ^
-		BetwiseAND();
+		pair<DataType, DataValue> res2 = BetwiseAND();
+		if (res.first == DTYPE_DOUBLE || res2.first == DTYPE_DOUBLE) {
+			scan->printError("Wrong type");
+		}
+		res.second.dataAsInt = res.second.dataAsInt ^ res2.second.dataAsInt;
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
@@ -317,7 +325,11 @@ pair<DataType, DataValue> TDiagram::BetwiseAND() {	// СД побитового И
 	int lexType = scan->scaner(lex);
 
 	while (lexType == TBAnd) {	// &
-		Equal();
+		pair<DataType, DataValue> res2 = Equal();
+		if (res.first == DTYPE_DOUBLE || res2.first == DTYPE_DOUBLE) {
+			scan->printError("Wrong type");
+		}
+		res.second.dataAsInt = res.second.dataAsInt & res2.second.dataAsInt;
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
@@ -373,8 +385,15 @@ pair<DataType, DataValue> TDiagram::Shift() {	// СД сдвигов
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType == TBLS || lexType == TBRS) {	// ">>" / "<<"
-		Addition();
+	while (lexType == TBLS || lexType == TBRS) {	// TBLS = "<<", TBRS = ">>"
+		pair<DataType, DataValue> res2 = Addition();
+		if (res.first == DTYPE_DOUBLE || res2.first == DTYPE_DOUBLE) {
+			scan->printError("Wrong type");
+		}
+		if (lexType == TBLS)
+			res.second.dataAsInt = res.second.dataAsInt << res2.second.dataAsInt;
+		else
+			res.second.dataAsInt = res.second.dataAsInt >> res2.second.dataAsInt;
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
@@ -393,7 +412,22 @@ pair<DataType, DataValue> TDiagram::Addition() {	// СД сложения (вычитания)
 	int lexType = scan->scaner(lex);
 
 	while (lexType == TPlus || lexType == TMinus) {	// "+" / "-"
-		Multiplication();
+		pair<DataType, DataValue> res2 = Multiplication();
+
+		if (res.first == DTYPE_DOUBLE || res2.first == DTYPE_DOUBLE) {
+			res = Tree::IntToDouble(res);
+			res2 = Tree::IntToDouble(res2);
+			if (lexType == TPlus)
+				res.second.dataAsDouble = res.second.dataAsDouble + res2.second.dataAsDouble;
+			else
+				res.second.dataAsDouble = res.second.dataAsDouble - res2.second.dataAsDouble;
+		}
+		else {
+			if (lexType == TPlus)
+				res.second.dataAsInt = res.second.dataAsInt + res2.second.dataAsInt;
+			else
+				res.second.dataAsInt = res.second.dataAsInt - res2.second.dataAsInt;
+		}
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
@@ -412,7 +446,21 @@ pair<DataType, DataValue> TDiagram::Multiplication() {	// СД умножения (деления)
 	int lexType = scan->scaner(lex);
 
 	while (lexType == TMult || lexType == TDiv) {	// "*" / "/"
-		BetwiseNOT();
+		pair<DataType, DataValue> res2 = BetwiseNOT();
+		if (res.first == DTYPE_DOUBLE || res2.first == DTYPE_DOUBLE) {
+			res = Tree::IntToDouble(res);
+			res2 = Tree::IntToDouble(res2);
+			if (lexType == TMult)
+				res.second.dataAsDouble = res.second.dataAsDouble * res2.second.dataAsDouble;
+			else
+				res.second.dataAsDouble = res.second.dataAsDouble / res2.second.dataAsDouble;
+		}
+		else {
+			if (lexType == TMult)
+				res.second.dataAsInt = res.second.dataAsInt * res2.second.dataAsInt;
+			else
+				res.second.dataAsInt = res.second.dataAsInt / res2.second.dataAsInt;
+		}
 		uk = scan->getUK();
 		str = scan->getStringNumber();
 		lexType = scan->scaner(lex);
@@ -422,25 +470,28 @@ pair<DataType, DataValue> TDiagram::Multiplication() {	// СД умножения (деления)
 	return res;
 }
 
-
 pair<DataType, DataValue> TDiagram::BetwiseNOT() {	// СД побитового НЕ
-	pair<DataType, DataValue> res = Elementary();
+	
+	pair<DataType, DataValue> res;
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
-	while (lexType == TBNot) {	//	~
-		Elementary();
-		uk = scan->getUK();
-		str = scan->getStringNumber();
-		lexType = scan->scaner(lex);
+	if (lexType == TBNot) {
+		res = Elementary();
+		if (res.first == DTYPE_DOUBLE) {
+			scan->printError("Wrong type");
+		}
+		res.second.dataAsInt = ~res.second.dataAsInt;
 	}
-	scan->putUK(uk);
-	scan->putString(str);
+	else {
+		scan->putUK(uk);
+		scan->putString(str);
+		res = Elementary();
+	}
 	return res;
 }
-
 
 pair<DataType, DataValue> TDiagram::Elementary() {	// СД элементарного выражения
 	int uk = scan->getUK();
@@ -473,12 +524,12 @@ pair<DataType, DataValue> TDiagram::Elementary() {	// СД элементарного выражения
 
 	// выражение в скобках
 	if (lexType == TLB) {
-		Assignment();
+		pair<DataType, DataValue> res = Assignment();
 		lexType = scan->scaner(lex);
 		if (lexType != TRB) {
 			scan->printError("Syntax", lex, ")");
 		}
-		return make_pair(dataType, dataValue);	/////////////////////////////////////// заглушка
+		return res;
 	}
 	
 	// идентификатор
