@@ -23,10 +23,11 @@ private:
 	pair<DataType, DataValue> Shift();					// сдвиг
 	pair<DataType, DataValue> Addition();				// сложение
 	pair<DataType, DataValue> Multiplication();			// умножение
-	pair<DataType, DataValue> BetwiseNOT();				// побитовое не
+	pair<DataType, DataValue> Unary();					// унарные операции
 	pair<DataType, DataValue> Elementary();				// элементарное выражение
-	void CompositeStatement();		// составной оператор
-	void Statement();				// оператор
+	void CompositeStatement(bool needAllocation = true, bool flagInterpretFor = true);		// составной оператор
+	void Statement(bool needAllocation=true, bool flagInterpretFor=true);				// оператор
+	void For(bool flagInterpretFor);
 	void ActionsAndConditions();	// действия и условия для цикла for
 	pair<DataType, DataValue> Assignment();
 

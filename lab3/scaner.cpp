@@ -120,7 +120,8 @@ int TScaner::scaner(TypeLex &l) {
 
     bool isCut = false;     // проверка - обрезанная константа или нет
 
-    if ((t[uk] <= '9') && (t[uk] >= '0')) {
+    if ((t[uk] <= '9') && (t[uk] >= '0')) 
+    {
         l += t[uk++];
         while ((t[uk] <= '9') && (t[uk] >= '0'))
             if (l.size() < MAX_LEX) // проверка на длину лексемы, если длинная - обрезать

@@ -38,7 +38,7 @@ void TDiagram::Prog() {					// аксиома
 		scan->printError("Syntax", lex, "main");
 	}
 
-	Tree::AddAreaofVisibility(lex);
+	
 
 	lexType = scan->scaner(lex);
 	if (lexType != TLB) {	// (
@@ -50,7 +50,12 @@ void TDiagram::Prog() {					// аксиома
 		scan->printError("Syntax", lex, ")");
 	}
 
+	Tree::AddAreaofVisibility("main");
+
 	CompositeStatement();
+	PrintSemantTree("in main");
+	Tree::FreeMemory();
+
 }
 
 
@@ -147,8 +152,8 @@ vector<string> TDiagram::Identifiers() {	// СД идентификаторов
 
 
 void TDiagram::Data(bool needAllocation) {	// СД данных
-	int uk;
-	int str;
+	int uk = scan->getUK();
+	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 	int type = lexType;
@@ -162,6 +167,8 @@ void TDiagram::Data(bool needAllocation) {	// СД данных
 		if (struc == nullptr) {
 			scan->printError("Semant", notDefine, lex);
 		}
+		//scan->putUK(uk);
+		//scan->putString(str);
 	}
 
 	do {
@@ -256,19 +263,31 @@ void TDiagram::Var(int type, Tree *struc, bool needAllocation) {	// СД переменно
 
 
 pair<DataType, DataValue> TDiagram::Assignment() {	// операция присваивания
-	pair<DataType, DataValue> res = BetwiseOR();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
-	while (lexType == TSave) {	//	=
-		res = BetwiseOR();
-		uk = scan->getUK();
-		str = scan->getStringNumber();
+	pair<DataType, DataValue> res;
+
+	if (lexType == Tident) {
+		scan->putUK(uk);
+		scan->putString(str);
+		vector<string> ident = Identifiers();
 		lexType = scan->scaner(lex);
+		if (lexType == TSave) {
+			res = BetwiseOR();
+			Tree::SetData(ident, res.first, res.second);
+		}
+		else {
+			goto notAssignment;
+		}
 	}
-	scan->putUK(uk);
-	scan->putString(str);
+	else { 
+		notAssignment:
+		scan->putUK(uk);
+		scan->putString(str);
+		res = BetwiseOR(); 
+	}
 	return res;
 }
 
@@ -568,14 +587,14 @@ pair<DataType, DataValue> TDiagram::Addition() {	// СД сложения (вычитания)
 
 
 pair<DataType, DataValue> TDiagram::Multiplication() {	// СД умножения (деления)
-	pair<DataType, DataValue> res = BetwiseNOT();
+	pair<DataType, DataValue> res = Unary();
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
 	int lexType = scan->scaner(lex);
 
 	while (lexType == TMult || lexType == TDiv) {	// "*" / "/"
-		pair<DataType, DataValue> res2 = BetwiseNOT();
+		pair<DataType, DataValue> res2 = Unary();
 		if (res.first == DTYPE_DOUBLE || res2.first == DTYPE_DOUBLE) {
 			res = Tree::IntToDouble(res);
 			res2 = Tree::IntToDouble(res2);
@@ -599,7 +618,7 @@ pair<DataType, DataValue> TDiagram::Multiplication() {	// СД умножения (деления)
 	return res;
 }
 
-pair<DataType, DataValue> TDiagram::BetwiseNOT() {	// СД побитового НЕ
+pair<DataType, DataValue> TDiagram::Unary() {	// СД унарных операций
 	
 	pair<DataType, DataValue> res;
 	int uk = scan->getUK();
@@ -613,6 +632,15 @@ pair<DataType, DataValue> TDiagram::BetwiseNOT() {	// СД побитового НЕ
 			scan->printError("Wrong type");
 		}
 		res.second.dataAsInt = ~res.second.dataAsInt;
+	}
+	else if (lexType == TMinus) {
+		res = Elementary();
+		if (res.first == DTYPE_DOUBLE) {
+			res.second.dataAsDouble = -res.second.dataAsDouble;
+		}
+		else {
+			res.second.dataAsInt = -res.second.dataAsInt;
+		}
 	}
 	else {
 		scan->putUK(uk);
@@ -670,8 +698,7 @@ pair<DataType, DataValue> TDiagram::Elementary() {	// СД элементарного выражения
 }
 
 
-void TDiagram::CompositeStatement() {	// СД составной оператор
-	PrintSemantTree("before composite statement");
+void TDiagram::CompositeStatement(bool needAllocation, bool flagInterpretFor) {	// СД составной оператор
 	int uk;
 	int str;
 	TypeLex lex;
@@ -695,6 +722,11 @@ void TDiagram::CompositeStatement() {	// СД составной оператор
 			continue;
 		}
 		if (lexType == Tident) {
+			scan->putUK(uk);
+			scan->putString(str);
+			vector <string> s = Identifiers();
+			if (s.size() > 1)
+				goto statementtt;
 			lexType = scan->scaner(lex);
 			scan->putUK(uk);
 			scan->putString(str);
@@ -711,12 +743,12 @@ void TDiagram::CompositeStatement() {	// СД составной оператор
 				}
 			}
 		}
-
+		statementtt:
 		// опреатор
 		do {
 			scan->putUK(uk);
 			scan->putString(str);
-			Statement();
+			Statement(needAllocation, flagInterpretFor);
 			uk = scan->getUK();
 			str = scan->getStringNumber();
 			lexType = scan->scaner(lex);
@@ -729,16 +761,13 @@ void TDiagram::CompositeStatement() {	// СД составной оператор
 				}
 			}
 		} while (lexType == Tident || lexType == TFLB || lexType == Tfor || lexType == TDC);
-		scan->putUK(uk);
-		scan->putString(str);
+		
 	}
-	PrintSemantTree("in composite statement");
-	Tree::FreeMemory();
-	PrintSemantTree("after composite statement");
+	
 }
 
 
-void TDiagram::Statement() {	// СД оператор
+void TDiagram::Statement(bool needAllocation, bool flagInterpretFor) {	// СД оператор
 	int uk = scan->getUK();
 	int str = scan->getStringNumber();
 	TypeLex lex;
@@ -767,50 +796,28 @@ void TDiagram::Statement() {	// СД оператор
 	else if (lexType == TFLB) {	// "{" составной оператор
 		scan->putUK(uk);
 		scan->putString(str);
-		Tree* k = Tree::GetPos();
-		Tree::AddAreaofVisibility("");
-		CompositeStatement();
-		k->SetPos();
-		//Tree::CorrectPos();
+		if (Tree::flagInterpret && needAllocation) {
+			Tree::AddAreaofVisibility("");
+		}
+
+		CompositeStatement(needAllocation, flagInterpretFor);
+
+		if (Tree::flagInterpret && needAllocation) {
+			PrintSemantTree("in composite statement");
+			Tree::FreeMemory();
+		}
 	}
 
 	else if (lexType == Tfor) { // оператор for
-		PrintSemantTree("before for");
-		Tree* k = Tree::GetPos();
-		Tree::AddAreaofVisibility(lex);
-		lexType = scan->scaner(lex);
-		if (lexType != TLB) {	// (
-			scan->printError("Syntax", lex, "(");
+		if (needAllocation) {
+			Tree::AddAreaofVisibility("for");
 		}
 
-		ActionsAndConditions();
+		For(flagInterpretFor);
 
-		lexType = scan->scaner(lex);
-		if (lexType != TRB) {	// )
-			scan->printError("Syntax", lex, ")");
+		if (needAllocation) {
+			Tree::FreeMemory();
 		}
-
-		uk = scan->getUK();
-		lexType = scan->scaner(lex);
-		str = scan->getStringNumber();
-
-		if (lexType >= Tint && lexType <= Tstruct) {
-			scan->putUK(uk);
-			scan->putString(str);
-			Data();
-		}
-		else {
-			scan->putUK(uk);
-			scan->putString(str);
-			Statement();
-		}
-
-		PrintSemantTree("in for");
-		Tree::FreeMemory();
-		PrintSemantTree("after for");
-		
-		k->SetPos();
-		//Tree::CorrectPos();
 	}
 
 	else {	// пустой оператор
@@ -818,6 +825,174 @@ void TDiagram::Statement() {	// СД оператор
 			scan->printError("Syntax", lex, ";");
 		}
 	}
+}
+
+
+void TDiagram::For(bool flagInterpretFor) {
+
+	if (!flagInterpretFor) {
+		Tree::flagInterpret = false;
+	}
+	
+	TypeLex lex;
+	int uk, str;
+	int lexType = scan->scaner(lex);
+	if (lexType != TLB) {	// (
+		scan->printError("Syntax", lex, "(");
+	}
+
+	uk = scan->getUK();
+	str = scan->getStringNumber();
+	lexType = scan->scaner(lex);
+
+	// действие перед циклом
+
+	if (lexType != TDC) {	// ;
+		scan->putUK(uk);
+		scan->putString(str);
+		if (lexType == Tident) {
+			Identifiers();
+			lexType = scan->scaner(lex);
+			scan->putUK(uk);
+			scan->putString(str);
+			if (lexType == TSave) {
+				Assignment();
+				lexType = scan->scaner(lex);
+			}
+		}
+		else if (lexType >= Tint && lexType <= Tstruct || lexType == Tident) {
+			Data();
+		}
+		else {
+			Assignment();
+			uk = scan->getUK();
+			str = scan->getStringNumber();
+			lexType = scan->scaner(lex);
+			if (lexType != TDC) {	// ;
+				scan->printError("Syntax", lex, ";");
+			}
+			scan->putUK(uk);
+			scan->putString(str);
+		}
+	}
+
+	// указатель, чтобы возвращаться к выражению выхода из цикла
+	int uk1 = scan->getUK();
+	int str1 = scan->getStringNumber();
+
+	uk = scan->getUK();
+	str = scan->getStringNumber();
+	lexType = scan->scaner(lex);
+
+	// ограничение
+
+	if (lexType != TDC) {	// ;
+		scan->putUK(uk);
+		scan->putString(str);
+		pair<DataType, DataValue> res = Assignment();
+		if (flagInterpretFor)
+			Tree::recalculateFlag(res);
+		lexType = scan->scaner(lex);
+		if (lexType != TDC) {	// ;
+			scan->printError("Syntax", lex, ";");
+		}
+	}
+
+	// указатель, чтобы выполнять выражение после каждой итерации
+	int uk2 = scan->getUK();
+	int str2 = scan->getStringNumber();
+	bool localFlag = Tree::flagInterpret;
+	Tree::flagInterpret = false;
+
+	uk = scan->getUK();
+	str = scan->getStringNumber();
+	lexType = scan->scaner(lex);
+	scan->putUK(uk);
+	scan->putString(str);
+
+	// действие после каждого цикла
+
+	if (lexType != TRB) {
+		Assignment();
+	}
+
+	Tree::flagInterpret = localFlag;
+
+	lexType = scan->scaner(lex);
+	if (lexType != TRB) {	// )
+		scan->printError("Syntax", lex, ")");
+	}
+
+	// указатель, чтобы выполнять итерацию (оператор)
+	int uk3 = scan->getUK();
+	int str3 = scan->getStringNumber();
+
+	while (Tree::flagInterpret) {
+
+		Tree::AddAreaofVisibility("for");
+		// возвращаем указатель на начало оператора который нужно выполнить во время итерации
+		scan->putUK(uk3);
+		scan->putString(str3);
+
+		// оператор цикла (сама итерация)
+		lexType = scan->scaner(lex);
+
+		if (lexType >= Tint && lexType <= Tstruct) {
+			scan->putUK(uk3);
+			scan->putString(str3);
+			Data();
+		}
+		else {
+			scan->putUK(uk3);
+			scan->putString(str3);
+			Statement(false);
+		}
+
+		PrintSemantTree("after iteration");
+
+		// выражение после цикла
+
+		scan->putUK(uk2);
+		scan->putString(str2);
+		lexType = scan->scaner(lex);
+		scan->putUK(uk2);
+		scan->putString(str2);
+		if (lexType != TRB) {
+			Assignment();
+		}
+
+		// пересчитываем флаг интерпретатора
+
+		scan->putUK(uk1);
+		scan->putString(str1);
+		lexType = scan->scaner(lex);
+		if (lexType != TDC) {	// ;
+			scan->putUK(uk1);
+			scan->putString(str1);
+			pair<DataType, DataValue> res = Assignment();
+			Tree::recalculateFlag(res);
+		}
+		Tree::FreeMemory();
+		
+	}
+
+	scan->putUK(uk3);
+	scan->putString(str3);
+	lexType = scan->scaner(lex);
+
+	if (lexType >= Tint && lexType <= Tstruct) {
+		scan->putUK(uk3);
+		scan->putString(str3);
+		Data();
+	}
+	else {
+		scan->putUK(uk3);
+		scan->putString(str3);
+		Statement(false, false);
+		uk = scan->getUK();
+		str = scan->getStringNumber();
+	}
+	Tree::flagInterpret = true;
 }
 
 

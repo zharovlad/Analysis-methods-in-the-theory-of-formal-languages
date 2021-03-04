@@ -54,8 +54,10 @@ private:
     static TScaner *scaner;
     static Tree *current;
 
+
 public:
     
+    static bool flagInterpret;
     Tree(Node *, Tree *, Tree *, Tree *);
     Tree(Tree*);
     Tree();
@@ -87,5 +89,6 @@ public:
     static pair<DataType, DataValue> DoubleToInt(pair<DataType, DataValue> value);
     static Tree* NextInit(Tree* , pair<DataType, DataValue>);
     Tree* GetStructFirstVar();
+    static void recalculateFlag(pair<DataType, DataValue> res);
 
 };

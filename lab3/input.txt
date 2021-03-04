@@ -1,0 +1,65 @@
+struct _struct1 {
+    int b;
+    double c;
+};
+
+struct _struct2 {
+    _struct1 e;
+};
+
+int i = -90 + ~80 - 70 * 3 / 2 | 3 << 1 , ii = 0, iii = 0.9-6;
+/*комментарий*/
+/*
+
+
+
+*/
+
+/*
+struct opopop {_struct2 ssss; double y;}
+тут нет пустого оператора после структуры
+*/
+
+
+//
+//
+//
+//
+
+//
+double j = 80.3e+5, jj, jjj = j;
+
+int main () {
+    _struct1 s1 = {2 << 8, 2 >> 8};
+    _struct1 s2 = {j, i};
+    {
+        int IntA = 343434 >= 11111;
+        double DoubleB = (56 == 56);;;;;
+    }
+    {;;;;;;;;{};;;};
+    int IntA = 34 * 5;
+    double DoubleB = 5555;
+    ;;;;;
+    for (s1.b = 33 + 34; s1.b > 50;) 
+    {
+        double s2 = -789 * 3 / 90;
+        s1.b = s1.b - 10;
+    }
+        
+    ;;;;
+    {
+        int IntA;
+        double DoubleB;
+        _struct1 s1;
+        _struct2 s2;
+        double i = 45.334;
+        int j = 0;
+        for (j = 33; i != 84; i = 84)
+        {
+            // тут тоже есть кооооментарий
+            j = 88 != 90;
+        }
+    }
+
+    
+}

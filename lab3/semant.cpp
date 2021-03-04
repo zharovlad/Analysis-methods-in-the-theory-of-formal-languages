@@ -3,6 +3,7 @@
 
 TScaner* Tree::scaner = nullptr;
 Tree* Tree::current = nullptr;
+bool Tree::flagInterpret = true;
 
 map <TypeLex, string> StructNames;
 
@@ -30,10 +31,14 @@ Tree::Tree() {
 }
 
 void Tree::SetLeft(Node *data) {
+    if (!flagInterpret)
+        return;
     left = new Tree(data, this, nullptr, nullptr);
 }
 
 void Tree::SetRight(Node *data) {
+    if (!flagInterpret)
+        return;
     right = new Tree(data, this, nullptr, nullptr);
 }
 
@@ -94,12 +99,13 @@ Tree *Tree::FindUp(Tree *from, TypeLex id) {
 
 Tree *Tree::FindOneLevel(Tree *from, TypeLex id) {
     // ѕоиск вверх по одной области видимости
-    if (from == nullptr)
-        return nullptr;
-    if (from->n->dataType == TYPE_EMPTY)
-        return nullptr;
     if (from->n->id == id)
         return from;
+    if (from->up == nullptr)
+        return nullptr;
+    if (from->up->right == from)
+        return nullptr;
+
     return FindOneLevel(from->up, id);
 }
 
@@ -118,6 +124,8 @@ void Tree::SetScaner(TScaner* scan) {
 }
 
 void Tree::SetPos() {
+    if (!flagInterpret)
+        return;
     // ”становить текущий элемент дерева
     current = this;
 }
@@ -128,11 +136,16 @@ Tree* Tree::GetPos() {
 }
 
 void Tree::CorrectPos() {
+    if (!flagInterpret)
+        return;
     // ѕосле создани€ переменной перейти к ней 
     current = current->left;
 }
 
 void Tree::AddID(TypeLex lex, int type, DataType dataType, Tree *struc, bool needAllocation) {
+    if (!flagInterpret)
+        return;
+
     // добавление переменной 
 
     if (FindOneLevel(current, lex) != nullptr) {
@@ -168,10 +181,14 @@ void Tree::AddID(TypeLex lex, int type, DataType dataType, Tree *struc, bool nee
 }
 
 void Tree::MemoryAllocation(Tree *struc) {
+    if (!flagInterpret)
+        return;
     current->right = new Tree(struc->right);
 }
 
 void Tree::AddTypeStruct(TypeLex lex) {
+    if (!flagInterpret)
+        return;
     // добавление новой структуры
     if (FindOneLevel(current, lex) != nullptr) {
         scaner->printError("Semant", dual, lex);
@@ -201,6 +218,8 @@ int Tree::FindIDinStruct(TypeLex id, TypeLex prevID, TypeLex error) {
 }
 
 void Tree::AddAreaofVisibility(TypeLex block) {
+    if (!flagInterpret)
+        return;
     // ƒобавить область видимости
 
     Node* node = new Node();
@@ -227,6 +246,8 @@ void Tree::AddAreaofVisibility(TypeLex block) {
 }
 
 void Tree::AddEmpty(TypeLex lex) {
+    if (!flagInterpret)
+        return;
     // ƒобавл€ет пустую вершину дл€ новой области видимости
     Node* empty = new Node();
     empty->objectType = TYPE_EMPTY;
@@ -251,6 +272,8 @@ void Tree::FreeMemory() {
 }
 
 void Tree::SetData(vector<string> ident, DataType newDataType, DataValue newDataValue) {
+    if (!flagInterpret)
+        return;
     // присваивание
     Tree* tree = Tree::FindID(ident[0]);
     if (ident.size() > 1) {
@@ -294,6 +317,9 @@ void Tree::SetData(vector<string> ident, DataType newDataType, DataValue newData
 }
 
 pair<DataType, DataValue> Tree::GetData(vector<string> ident) {
+    if (!flagInterpret) {
+        return make_pair(DTYPE_UNKNOWN, DataValue());
+    }
     Tree* tree = Tree::FindID(ident[0]);
     if (ident.size() > 1) {
         for (int i = 1; i < ident.size(); i++) {
@@ -333,6 +359,7 @@ pair<DataType, DataValue> Tree::DoubleToInt(pair<DataType, DataValue> value) {
 }
 
 Tree* Tree::NextInit(Tree* current, pair<DataType, DataValue> value) {
+
     if (current->n->dataType == DTYPE_INT) {
         value = DoubleToInt(value);
     }
@@ -344,3 +371,13 @@ Tree* Tree::NextInit(Tree* current, pair<DataType, DataValue> value) {
 }
 
 Tree* Tree::GetStructFirstVar() { return right->left; }
+
+void Tree::recalculateFlag(pair<DataType, DataValue> res) {
+    if (res.first == DTYPE_INT && res.second.dataAsInt == 0) {
+        flagInterpret = false;
+    }
+    else {
+        flagInterpret = true;
+    }
+}
+
